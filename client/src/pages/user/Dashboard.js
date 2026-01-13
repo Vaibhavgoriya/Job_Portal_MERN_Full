@@ -1,0 +1,228 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "../../api/axios";
+import ApplyJobModal from "../../components/user/ApplyJobModal";
+
+const Dashboard = () => {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedJob, setSelectedJob] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const res = await axios.get("/jobs");
+        setJobs(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        setError("Failed to fetch jobs");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJobs();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("role");
+    navigate("/user/login");
+  };
+
+  const cards = useMemo(() => {
+    return jobs.map((job) => {
+      const tech = job.Technology ?? job.technology ?? job.technologyName ?? "-";
+      const exp = job.Experience ?? job.experience ?? job.experienceValue ?? "-";
+      return (
+        <div key={job._id} style={card}>
+          <div style={cardTop}>
+            <div>
+              <div style={role}>{job.title}</div>
+              <div style={company}>{job.company}</div>
+            </div>
+            <div style={pillRow}>
+              <span style={pill}>₹ {job.salary || "Not specified"}</span>
+              <span style={pillSecondary}>{job.location || "-"}</span>
+            </div>
+          </div>
+
+          <div style={metaGrid}>
+            <div>
+              <div style={metaLabel}>Technology</div>
+              <div style={metaValue}>{Array.isArray(tech) ? tech.join(", ") : tech}</div>
+            </div>
+            <div>
+              <div style={metaLabel}>Experience</div>
+              <div style={metaValue}>{exp}</div>
+            </div>
+          </div>
+
+          <div style={desc}>{job.description || ""}</div>
+
+          <div style={actions}>
+            <button style={applyBtn} onClick={() => setSelectedJob(job)}>
+              Apply Now
+            </button>
+          </div>
+        </div>
+      );
+    });
+  }, [jobs]);
+
+  return (
+    <div style={page}>
+      <div style={headerWrap}>
+        <div>
+          <div style={title}>User Dashboard</div>
+          <div style={subtitle}>All jobs (same format as Admin + DB)</div>
+        </div>
+        <button onClick={handleLogout} style={logoutBtn}>
+          Logout
+        </button>
+      </div>
+
+      {loading && <div style={info}>Loading...</div>}
+      {error && <div style={{ ...info, color: "#b91c1c" }}>{error}</div>}
+      {!loading && !error && jobs.length === 0 && <div style={info}>No jobs found.</div>}
+
+      <div style={grid}>{cards}</div>
+
+      <ApplyJobModal
+        job={selectedJob}
+        open={!!selectedJob}
+        onClose={() => setSelectedJob(null)}
+        onSuccess={() => {}}
+      />
+    </div>
+  );
+};
+
+const page = {
+  minHeight: "100vh",
+  background: "linear-gradient(135deg, #f6f8fc 0%, #eef2ff 100%)",
+  padding: "28px 16px 40px",
+  fontFamily: "Segoe UI, Arial, sans-serif",
+};
+
+const headerWrap = {
+  maxWidth: 1100,
+  margin: "0 auto 18px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  background: "#fff",
+  border: "1px solid #e6eaf2",
+  borderRadius: 16,
+  padding: "18px 18px",
+  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+};
+
+const title = { fontSize: 22, fontWeight: 900, color: "#0f172a" };
+const subtitle = { marginTop: 4, fontSize: 13, color: "#475569" };
+
+const logoutBtn = {
+  padding: "10px 14px",
+  background: "linear-gradient(90deg, #e53935 0%, #ff7043 100%)",
+  color: "#fff",
+  border: "none",
+  borderRadius: 12,
+  fontWeight: 900,
+  cursor: "pointer",
+  boxShadow: "0 6px 16px rgba(229,57,53,0.22)",
+};
+
+const info = {
+  maxWidth: 1100,
+  margin: "0 auto 16px",
+  padding: "12px 14px",
+  background: "#fff",
+  borderRadius: 14,
+  border: "1px solid #e6eaf2",
+  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.06)",
+  color: "#0f172a",
+};
+
+const grid = {
+  maxWidth: 1100,
+  margin: "0 auto",
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))",
+  gap: 16,
+};
+
+const card = {
+  background: "rgba(255,255,255,0.98)",
+  borderRadius: 18,
+  border: "1px solid #e6eaf2",
+  padding: 18,
+  boxShadow: "0 12px 34px rgba(15, 23, 42, 0.10)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+};
+
+const cardTop = { display: "flex", justifyContent: "space-between", gap: 12 };
+const role = { fontSize: 18, fontWeight: 900, color: "#0f172a" };
+const company = { marginTop: 4, fontSize: 14, fontWeight: 700, color: "#334155" };
+
+const pillRow = { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 };
+
+const pill = {
+  fontSize: 12,
+  fontWeight: 900,
+  color: "#0f172a",
+  background: "#eef2ff",
+  border: "1px solid #c7d2fe",
+  padding: "6px 10px",
+  borderRadius: 999,
+  whiteSpace: "nowrap",
+};
+
+const pillSecondary = {
+  fontSize: 12,
+  fontWeight: 800,
+  color: "#0f172a",
+  background: "#ecfeff",
+  border: "1px solid #a5f3fc",
+  padding: "6px 10px",
+  borderRadius: 999,
+  whiteSpace: "nowrap",
+};
+
+const metaGrid = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 12,
+  background: "#f8fafc",
+  border: "1px solid #e2e8f0",
+  borderRadius: 14,
+  padding: 12,
+};
+
+const metaLabel = { fontSize: 11, fontWeight: 900, color: "#64748b", letterSpacing: 0.6, textTransform: "uppercase" };
+const metaValue = { marginTop: 4, fontSize: 14, fontWeight: 800, color: "#0f172a" };
+
+const desc = {
+  color: "#334155",
+  fontSize: 13,
+  lineHeight: 1.45,
+  minHeight: 40,
+};
+
+const actions = { display: "flex", justifyContent: "flex-end" };
+
+const applyBtn = {
+  padding: "10px 14px",
+  background: "linear-gradient(90deg, #003366 0%, #0052cc 100%)",
+  color: "#fff",
+  border: "none",
+  borderRadius: 12,
+  fontWeight: 900,
+  cursor: "pointer",
+  boxShadow: "0 10px 22px rgba(0,82,204,0.18)",
+};
+
+export default Dashboard;

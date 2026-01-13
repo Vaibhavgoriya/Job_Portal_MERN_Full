@@ -1,0 +1,48 @@
+body {
+  margin: 0;
+  font-family: Segoe UI, sans-serif;
+  background: #f2f4f7;
+}
+
+.navbar {
+  background: #0a66c2;
+  color: white;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.navbar a {
+  color: white;
+  margin-left: 15px;
+  text-decoration: none;
+}
+
+.box {
+  background: white;
+  max-width: 600px;
+  margin: 30px auto;
+  padding: 25px;
+  border-radius: 10px;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+}
+
+button {
+  background: #0a66c2;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.job-card {
+  background: #f9fafb;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}

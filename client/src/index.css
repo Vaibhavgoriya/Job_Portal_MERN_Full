@@ -1,0 +1,30 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+}
+
+input, textarea {
+  width: 90%;
+  padding: 8px;
+}
+
+button {
+  background: #0a66c2;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  cursor: pointer;
+}
