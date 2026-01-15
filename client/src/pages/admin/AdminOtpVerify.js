@@ -50,14 +50,14 @@ function AdminOtpVerify() {
     <div style={{ minHeight: '100vh', background: '#f7fafd', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 2px 16px rgba(0,0,0,0.06)', width: 370, maxWidth: '95vw', padding: '32px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <h2 style={{ color: '#003366', fontWeight: 900, fontSize: 30, marginBottom: 18, letterSpacing: 0.5, textAlign: 'center', textShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>Verify OTP</h2>
-        <form onSubmit={handleVerify} style={{ width: '100%' }}>
+        <form onSubmit={handleVerify} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <input
             type="text"
             placeholder="Enter OTP"
             value={otp}
             onChange={e => setOtp(e.target.value)}
             required
-            style={{ width: '100%', padding: '12px', marginBottom: 18, border: '1px solid #e0e0e0', borderRadius: 7, fontSize: 15, background: '#f9fafb', outline: 'none', textAlign: 'center', letterSpacing: 4 }}
+            style={{ width: '60%', minWidth: 120, maxWidth: 220, padding: '12px', marginBottom: 18, border: '1px solid #e0e0e0', borderRadius: 7, fontSize: 15, background: '#f9fafb', outline: 'none', textAlign: 'center', letterSpacing: 4, display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
           />
           <button
             type="submit"

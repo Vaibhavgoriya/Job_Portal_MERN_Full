@@ -128,9 +128,14 @@ export default function AddJob({ onAdded }) {
   const submit = async () => {
     try {
       const token = localStorage.getItem("token");
-
+      // Always save technology as array, experience as string
+      const jobData = {
+        ...job,
+        technology: typeof job.technology === "string" ? job.technology.split(",").map(t => t.trim()).filter(Boolean) : [],
+        experience: String(job.experience || "")
+      };
       if (editingId) {
-        const res = await API.put(`/admin/jobs/${editingId}`, job, {
+        const res = await API.put(`/admin/jobs/${editingId}`, jobData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setEditingId(null);
@@ -140,7 +145,7 @@ export default function AddJob({ onAdded }) {
         setToast("");
         setTimeout(() => setShowEditPopup(false), 2200);
       } else {
-        const res = await API.post("/admin/jobs", job, {
+        const res = await API.post("/admin/jobs", jobData, {
           headers: { Authorization: `Bearer ${token}` },
         });
         onAdded?.(res.data);
@@ -148,7 +153,6 @@ export default function AddJob({ onAdded }) {
         setShowEditPopup(true);
         setTimeout(() => setShowEditPopup(false), 2200);
       }
-
       setJob({
         title: "",
         company: "",
@@ -172,7 +176,7 @@ export default function AddJob({ onAdded }) {
       location: j.location,
       salary: j.salary,
       description: j.description,
-      technology: j.technology || "",
+      technology: Array.isArray(j.technology) ? j.technology.join(", ") : (j.technology || ""),
       experience: j.experience || "",
     });
   };
@@ -303,7 +307,12 @@ export default function AddJob({ onAdded }) {
               <div style={{ fontSize: 12, color: "#555" }}>
                 {j.location} • {j.salary || "Not specified"}
               </div>
-              {/* ...removed Technology and Experience display... */}
+              <div style={{ fontSize: 12, color: "#555" }}>
+                <b>Technology:</b> {Array.isArray(j.technology) ? j.technology.join(", ") : j.technology || "-"}
+              </div>
+              <div style={{ fontSize: 12, color: "#555" }}>
+                <b>Experience:</b> {j.experience || "-"}
+              </div>
             </div>
             {/* ✅ Edit & Delete side by side */}
             <div

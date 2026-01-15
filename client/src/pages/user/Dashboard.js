@@ -5,6 +5,8 @@ import ApplyJobModal from "../../components/user/ApplyJobModal";
 
 const Dashboard = () => {
   const [jobs, setJobs] = useState([]);
+  const [locationFilter, setLocationFilter] = useState("");
+  const [techFilter, setTechFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedJob, setSelectedJob] = useState(null);
@@ -24,6 +26,18 @@ const Dashboard = () => {
     fetchJobs();
   }, []);
 
+  // Get unique locations (main IT cities in India)
+  const mainCities = [
+    "Ahmedabad", "Bangalore", "Chennai", "Delhi", "Gurgaon", "Hyderabad", "Kolkata", "Mumbai", "Noida", "Pune", "Surat", "Vadodara", "Rajkot", "Gandhinagar", "Bhavnagar", "Jamnagar", "Morbi", "Anand", "Nadiad", "Mehsana", "Navsari", "Bharuch", "Vapi", "Remote"
+  ];
+  const jobCities = Array.from(new Set(jobs.map(j => j.location).filter(l => l && mainCities.includes(l))));
+  const locationOptions = Array.from(new Set(["Remote", ...jobCities]));
+
+  // Get unique technologies from jobs
+  const allTechs = Array.from(new Set(jobs.flatMap(j => Array.isArray(j.technology) ? j.technology : (typeof j.technology === "string" ? j.technology.split(",").map(t => t.trim()) : [])))).filter(Boolean);
+  // Remove 'MERN' from technology list if present
+  const filteredTechs = allTechs.filter(t => t.toLowerCase() !== "mern");
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -33,51 +47,59 @@ const Dashboard = () => {
   };
 
   const cards = useMemo(() => {
-    return jobs.map((job) => {
-      const tech = job.Technology ?? job.technology ?? job.technologyName ?? "-";
-      const exp = job.Experience ?? job.experience ?? job.experienceValue ?? "-";
-      return (
-        <div key={job._id} style={card}>
-          <div style={cardTop}>
-            <div>
-              <div style={role}>{job.title}</div>
-              <div style={company}>{job.company}</div>
+    return jobs
+      .filter(job => {
+        // Location filter
+        if (locationFilter && job.location !== locationFilter) return false;
+        // Technology filter
+        const techArr = Array.isArray(job.technology) ? job.technology : (typeof job.technology === "string" ? job.technology.split(",").map(t => t.trim()) : []);
+        if (techFilter && !techArr.includes(techFilter)) return false;
+        return true;
+      })
+      .map((job) => {
+        const tech = job.Technology ?? job.technology ?? job.technologyName ?? "-";
+        const exp = job.Experience ?? job.experience ?? job.experienceValue ?? "-";
+        return (
+          <div key={job._id} style={card}>
+            <div style={cardTop}>
+              <div>
+                <div style={role}>{job.title}</div>
+                <div style={company}>{job.company}</div>
+              </div>
+              <div style={pillRow}>
+                <span style={pill}>₹ {job.salary || "Not specified"}</span>
+                <span style={pillSecondary}>{job.location || "-"}</span>
+              </div>
             </div>
-            <div style={pillRow}>
-              <span style={pill}>₹ {job.salary || "Not specified"}</span>
-              <span style={pillSecondary}>{job.location || "-"}</span>
+
+            <div style={metaGrid}>
+              <div>
+                <div style={metaLabel}>Technology</div>
+                <div style={metaValue}>{Array.isArray(tech) ? tech.join(", ") : tech}</div>
+              </div>
+              <div>
+                <div style={metaLabel}>Experience</div>
+                <div style={metaValue}>{exp}</div>
+              </div>
+            </div>
+
+            <div style={desc}>{job.description || ""}</div>
+
+            <div style={actions}>
+              <button style={applyBtn} onClick={() => setSelectedJob(job)}>
+                Apply Now
+              </button>
             </div>
           </div>
-
-          <div style={metaGrid}>
-            <div>
-              <div style={metaLabel}>Technology</div>
-              <div style={metaValue}>{Array.isArray(tech) ? tech.join(", ") : tech}</div>
-            </div>
-            <div>
-              <div style={metaLabel}>Experience</div>
-              <div style={metaValue}>{exp}</div>
-            </div>
-          </div>
-
-          <div style={desc}>{job.description || ""}</div>
-
-          <div style={actions}>
-            <button style={applyBtn} onClick={() => setSelectedJob(job)}>
-              Apply Now
-            </button>
-          </div>
-        </div>
-      );
-    });
-  }, [jobs]);
+        );
+      });
+  }, [jobs, locationFilter, techFilter]);
 
   return (
     <div style={page}>
       <div style={headerWrap}>
         <div>
           <div style={title}>User Dashboard</div>
-          <div style={subtitle}>All jobs (same format as Admin + DB)</div>
         </div>
         <button onClick={handleLogout} style={logoutBtn}>
           Logout
@@ -88,7 +110,27 @@ const Dashboard = () => {
       {error && <div style={{ ...info, color: "#b91c1c" }}>{error}</div>}
       {!loading && !error && jobs.length === 0 && <div style={info}>No jobs found.</div>}
 
-      <div style={grid}>{cards}</div>
+      {/* Filters */}
+      <div style={{ maxWidth: 1100, margin: "0 auto 18px", display: "flex", gap: 18 }}>
+        <select value={locationFilter} onChange={e => setLocationFilter(e.target.value)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #e6eaf2", fontWeight: 700 }}>
+          <option value="">All Locations</option>
+          {locationOptions.map(loc => (
+            <option key={loc} value={loc}>{loc}</option>
+          ))}
+        </select>
+        <select value={techFilter} onChange={e => setTechFilter(e.target.value)} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #e6eaf2", fontWeight: 700 }}>
+          <option value="">All Technologies</option>
+          {filteredTechs.map(tech => (
+            <option key={tech} value={tech}>{tech}</option>
+          ))}
+        </select>
+      </div>
+      <div style={grid}>
+        {cards}
+        {Array.from({ length: Math.max(0, 3 - cards.length) }).map((_, i) => (
+          <div key={"empty-" + i} style={{ visibility: "hidden" }} />
+        ))}
+      </div>
 
       <ApplyJobModal
         job={selectedJob}
@@ -149,8 +191,11 @@ const grid = {
   maxWidth: 1100,
   margin: "0 auto",
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))",
+  gridTemplateColumns: "repeat(3, 1fr)",
   gap: 16,
+  alignItems: "start",
+  minHeight: 0,
+  height: "auto",
 };
 
 const card = {
@@ -162,6 +207,8 @@ const card = {
   display: "flex",
   flexDirection: "column",
   gap: 12,
+  minHeight: 260,
+  height: "100%",
 };
 
 const cardTop = { display: "flex", justifyContent: "space-between", gap: 12 };

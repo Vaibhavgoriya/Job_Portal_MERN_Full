@@ -9,8 +9,21 @@ import sendEmail from "../utils/sendEmail.js";
 export const editJobByAdmin = async (req, res) => {
   try {
     const jobId = req.params.id;
-    const { title, company, location, jobType, salary, description } = req.body;
-    const updates = { title, company, location, jobType, salary, description };
+    const { title, company, location, jobType, salary, description, technology, experience } = req.body;
+    const updates = {
+      title,
+      company,
+      location,
+      jobType,
+      salary,
+      description,
+      technology: Array.isArray(technology)
+        ? technology
+        : typeof technology === "string"
+        ? technology.split(",").map((t) => t.trim()).filter(Boolean)
+        : [],
+      experience: experience ? String(experience) : ""
+    };
 
     console.log("editJobByAdmin received payload:", req.body);
     console.log("editJobByAdmin applying updates:", updates);
@@ -87,14 +100,20 @@ export const getAllApplications = async (req, res) => {
 ================================ */
 export const addJobByAdmin = async (req, res) => {
   try {
-    const { title, company, location, salary, description } = req.body;
 
+    const { title, company, location, salary, description, technology, experience } = req.body;
     const job = new Job({
       title,
       company,
       location,
       salary,
       description,
+      technology: Array.isArray(technology)
+        ? technology
+        : typeof technology === "string"
+        ? technology.split(",").map((t) => t.trim()).filter(Boolean)
+        : [],
+      experience: experience ? String(experience) : ""
     });
 
     await job.save();
