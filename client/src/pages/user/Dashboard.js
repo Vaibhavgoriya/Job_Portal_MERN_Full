@@ -125,11 +125,13 @@ const Dashboard = () => {
           ))}
         </select>
       </div>
-      <div style={grid}>
-        {cards}
-        {Array.from({ length: Math.max(0, 3 - cards.length) }).map((_, i) => (
-          <div key={"empty-" + i} style={{ visibility: "hidden" }} />
-        ))}
+      <div style={{paddingTop: 0, paddingBottom: 40}}>
+        <div style={grid}>
+          {cards}
+          {Array.from({ length: Math.max(0, 3 - cards.length) }).map((_, i) => (
+            <div key={"empty-" + i} style={{ visibility: "hidden" }} />
+          ))}
+        </div>
       </div>
 
       <ApplyJobModal
@@ -189,10 +191,11 @@ const info = {
 
 const grid = {
   maxWidth: 1100,
-  margin: "0 auto",
+  margin: "32px auto 40px auto",
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 16,
+  columnGap: 24,
+  rowGap: 64,
   alignItems: "start",
   minHeight: 0,
   height: "auto",
@@ -202,7 +205,7 @@ const card = {
   background: "rgba(255,255,255,0.98)",
   borderRadius: 18,
   border: "1px solid #e6eaf2",
-  padding: 18,
+  padding: "18px 18px 10px 18px",
   boxShadow: "0 12px 34px rgba(15, 23, 42, 0.10)",
   display: "flex",
   flexDirection: "column",
