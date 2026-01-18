@@ -13,7 +13,6 @@ const router = express.Router();
 router.post(
   "/apply",
   userAuth,
-  upload.single("resume"),
   applyJob
 );
 

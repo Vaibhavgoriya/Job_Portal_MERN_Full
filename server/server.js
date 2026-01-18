@@ -14,6 +14,7 @@ import adminRoutes from "./routes/adminRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import Admin from "./models/Admin.js";
+import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -35,6 +36,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // ✅ AUTH ROUTES (FIXED)
 app.use("/api/users", userAuthRoutes);
 app.use("/api/admin", adminAuthRoutes);
+app.use("/api/users", userRoutes);
 
 // Other routes (unchanged)
 app.use("/api/admin", adminRoutes);

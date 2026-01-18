@@ -5,6 +5,8 @@ import Register from "./pages/user/Register";
 import Dashboard from "./pages/user/Dashboard";
 import Jobs from "./pages/user/Jobs";
 import MyApplications from "./pages/user/MyApplications";
+
+import UserProfile from "./pages/user/UserProfile";
 import UserForgotPassword from "./pages/user/UserForgotPassword";
 import UserOtpVerify from "./pages/user/UserOtpVerify";
 import UserResetPassword from "./pages/user/UserResetPassword";
@@ -19,6 +21,8 @@ import AdminOtpVerify from "./pages/admin/AdminOtpVerify";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
 
 function App() {
+  // Import UserPrivateRoute here to wrap protected user routes
+  const UserPrivateRoute = require("./routes/UserPrivateRoute").default;
   return (
     <BrowserRouter>
       <Routes>
@@ -29,6 +33,7 @@ function App() {
         <Route path="/user/dashboard" element={<Dashboard />} />
         <Route path="/user/jobs" element={<Jobs />} />
         <Route path="/user/my-applications" element={<MyApplications />} />
+        <Route path="/user/profile" element={<UserPrivateRoute><UserProfile /></UserPrivateRoute>} />
         <Route path="/user/forgot-password" element={<UserForgotPassword />} />
         <Route path="/user/verify-otp" element={<UserOtpVerify />} />
         <Route path="/user/reset-password" element={<UserResetPassword />} />

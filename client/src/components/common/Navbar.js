@@ -28,9 +28,8 @@ const Navbar = () => {
           Online Job Portal
         </Typography>
         <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }}>
-          <Button color="inherit" component={Link} to="/user/dashboard">Dashboard</Button>
           <Button color="inherit" component={Link} to="/user/jobs">Jobs</Button>
-          <Button color="inherit" component={Link} to="/user/my-applications">My Applications</Button>
+          <Button color="inherit" component={Link} to="/user/profile">My Profile</Button>
           <Button color="inherit" onClick={logout}>Logout</Button>
         </Box>
       </Toolbar>

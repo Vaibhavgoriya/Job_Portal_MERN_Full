@@ -5,21 +5,18 @@ import sendEmail from "../utils/sendEmail.js";
 // ================= APPLY JOB =================
 export const applyJob = async (req, res) => {
   try {
-    const { jobId } = req.body;
-    const userId = req.user;
+    const { jobId, resume } = req.body;
+    const userId = req.user.id || req.user;
 
-    console.log("REQ.USER =", req.user);
-    console.log("REQ.BODY =", req.body);
-    console.log("REQ.FILE =", req.file);
-
-    if (!req.file) {
+    if (!resume) {
       return res.status(400).json({ message: "Resume required" });
     }
 
+    // No req.file check, use resume from req.body
     const application = new Application({
       jobId,
       userId,
-      resume: req.file.filename,
+      resume,
     });
 
     await application.save();

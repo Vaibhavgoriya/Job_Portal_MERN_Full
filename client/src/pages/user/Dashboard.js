@@ -46,6 +46,14 @@ const Dashboard = () => {
     navigate("/user/login");
   };
 
+  // New: Handlers for navbar buttons
+  const handleJobs = () => {
+    navigate("/user/dashboard");
+  };
+  const handleProfile = () => {
+    navigate("/user/profile"); // Change route as per your app
+  };
+
   const cards = useMemo(() => {
     return jobs
       .filter(job => {
@@ -97,11 +105,17 @@ const Dashboard = () => {
 
   return (
     <div style={page}>
-      <div style={headerWrap}>
-        <div>
-          <div style={title}>User Dashboard</div>
+      <div style={userNavWrap}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+          <span style={userNavTitle}>User Dashboard</span>
+          <button onClick={handleJobs} style={userNavBtn} onMouseOver={e => e.currentTarget.style.background = userNavBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userNavBtn.background}>
+            Jobs
+          </button>
+          <button onClick={handleProfile} style={userNavBtn} onMouseOver={e => e.currentTarget.style.background = userNavBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userNavBtn.background}>
+            My Profile
+          </button>
         </div>
-        <button onClick={handleLogout} style={logoutBtn}>
+        <button onClick={handleLogout} style={userLogoutBtn} onMouseOver={e => e.currentTarget.style.background = userLogoutBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userLogoutBtn.background}>
           Logout
         </button>
       </div>
@@ -151,21 +165,73 @@ const page = {
   fontFamily: "Segoe UI, Arial, sans-serif",
 };
 
-const headerWrap = {
-  maxWidth: 1100,
-  margin: "0 auto 18px",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  background: "#fff",
-  border: "1px solid #e6eaf2",
-  borderRadius: 16,
-  padding: "18px 18px",
-  boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+const userNavWrap = {
+  maxWidth: 1200,
+  margin: '0 auto 36px',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  background: 'rgba(255,255,255,0.75)',
+  border: '1.5px solid #e0e7ef',
+  borderRadius: 22,
+  padding: '22px 40px',
+  boxShadow: '0 8px 32px rgba(60,72,88,0.13)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+};
+
+const userNavTitle = {
+  fontSize: 30,
+  fontWeight: 900,
+  color: '#1e293b',
+  letterSpacing: 0.5,
+  textShadow: '0 2px 8px rgba(99,102,241,0.10)',
+  marginRight: 18,
+  padding: '0 8px',
+  borderRadius: 8,
+  background: 'rgba(236,245,255,0.5)',
+};
+
+const userNavBtn = {
+  padding: '12px 28px',
+  background: 'linear-gradient(90deg, #6366f1 0%, #60a5fa 100%)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 10,
+  fontWeight: 800,
+  fontSize: 17,
+  letterSpacing: 0.5,
+  cursor: 'pointer',
+  boxShadow: '0 4px 16px rgba(99,102,241,0.13)',
+  marginLeft: 0,
+  marginRight: 0,
+  textTransform: 'uppercase',
+  transition: 'background 0.2s, box-shadow 0.2s',
+};
+const userNavBtnHover = {
+  background: 'linear-gradient(90deg, #4f46e5 0%, #2563eb 100%)',
+};
+
+const userLogoutBtn = {
+  padding: '12px 28px',
+  background: 'linear-gradient(90deg, #e53935 0%, #ff7043 100%)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 10,
+  fontWeight: 800,
+  fontSize: 17,
+  letterSpacing: 0.5,
+  cursor: 'pointer',
+  boxShadow: '0 4px 16px rgba(229,57,53,0.13)',
+  textTransform: 'uppercase',
+  transition: 'background 0.2s, box-shadow 0.2s',
+};
+const userLogoutBtnHover = {
+  background: 'linear-gradient(90deg, #b91c1c 0%, #f87171 100%)',
 };
 
 const title = { fontSize: 22, fontWeight: 900, color: "#0f172a" };
-const subtitle = { marginTop: 4, fontSize: 13, color: "#475569" };
+
 
 const logoutBtn = {
   padding: "10px 14px",
@@ -176,6 +242,19 @@ const logoutBtn = {
   fontWeight: 900,
   cursor: "pointer",
   boxShadow: "0 6px 16px rgba(229,57,53,0.22)",
+};
+
+// New: navBtn style for navbar buttons
+const navBtn = {
+  padding: "8px 18px",
+  background: "linear-gradient(90deg, #6366f1 0%, #60a5fa 100%)",
+  color: "#fff",
+  border: "none",
+  borderRadius: 10,
+  fontWeight: 800,
+  cursor: "pointer",
+  fontSize: 15,
+  boxShadow: "0 4px 12px rgba(99,102,241,0.13)",
 };
 
 const info = {
@@ -205,13 +284,14 @@ const card = {
   background: "rgba(255,255,255,0.98)",
   borderRadius: 18,
   border: "1px solid #e6eaf2",
-  padding: "18px 18px 10px 18px",
+  padding: "18px 18px 2px 18px", // reduced bottom padding
   boxShadow: "0 12px 34px rgba(15, 23, 42, 0.10)",
   display: "flex",
   flexDirection: "column",
   gap: 12,
   minHeight: 260,
   height: "100%",
+  marginBottom: 10, // reduce if needed
 };
 
 const cardTop = { display: "flex", justifyContent: "space-between", gap: 12 };

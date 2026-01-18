@@ -1,10 +1,22 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import axios from "../../api/axios";
 
 const ApplyJobModal = ({ job, open, onClose, onSuccess }) => {
-  const fileRef = useRef();
+  // ...existing code...
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [profile, setProfile] = useState(null);
+  useEffect(() => {
+    // Fetch user profile to check completeness
+    const token = localStorage.getItem("token");
+    axios.get("/users/profile", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    }).then(res => {
+      setProfile(res.data);
+    }).catch(() => {
+      setProfile(null);
+    });
+  }, [open]);
 
   if (!open || !job) return null;
 
@@ -13,21 +25,22 @@ const ApplyJobModal = ({ job, open, onClose, onSuccess }) => {
     setError("");
     setLoading(true);
 
-    const file = fileRef.current?.files?.[0];
-    if (!file) {
-      setError("Please select a PDF resume");
+
+    // Check profile completeness
+    if (!profile || !profile.name || !profile.email || !profile.phone || !profile.address || !profile.education || !profile.experience || !profile.skills || !profile.resume) {
+      setError("Your profile is incomplete. Please complete your profile before applying.");
       setLoading(false);
       return;
     }
 
     const token = localStorage.getItem("token");
-    const formData = new FormData();
-    formData.append("jobId", job._id);
-    formData.append("resume", file);
     try {
-      await axios.post("/applications/apply", formData, {
+      await axios.post("/applications/apply", {
+        jobId: job._id,
+        resume: profile.resume,
+      }, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
@@ -46,7 +59,6 @@ const ApplyJobModal = ({ job, open, onClose, onSuccess }) => {
       <div style={modal}>
         <h3>Apply for {job.title}</h3>
         <form onSubmit={handleSubmit}>
-          <input type="file" accept="application/pdf" ref={fileRef} required style={input} />
           <button type="submit" style={button} disabled={loading}>
             {loading ? "Submitting..." : "Submit Application"}
           </button>
