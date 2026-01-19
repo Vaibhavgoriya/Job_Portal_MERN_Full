@@ -11,6 +11,10 @@ const Dashboard = () => {
   const [error, setError] = useState("");
   const [selectedJob, setSelectedJob] = useState(null);
   const navigate = useNavigate();
+  
+  const handleApplications = () => {
+    navigate("/user/my-applications");
+  };
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -114,6 +118,9 @@ const Dashboard = () => {
           <button onClick={handleProfile} style={userNavBtn} onMouseOver={e => e.currentTarget.style.background = userNavBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userNavBtn.background}>
             My Profile
           </button>
+            <button onClick={handleApplications} style={userNavBtn} onMouseOver={e => e.currentTarget.style.background = userNavBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userNavBtn.background}>
+              My Applications
+            </button>
         </div>
         <button onClick={handleLogout} style={userLogoutBtn} onMouseOver={e => e.currentTarget.style.background = userLogoutBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userLogoutBtn.background}>
           Logout

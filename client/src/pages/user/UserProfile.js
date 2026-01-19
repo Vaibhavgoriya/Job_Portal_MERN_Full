@@ -103,7 +103,7 @@ const UserProfile = () => {
       }}>My Profile</h2>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 28 }}>
         <img
-          src={profile.profilePic ? `http://localhost:5000${profile.profilePic}` : "https://ui-avatars.com/api/?name=" + profile.name}
+          src={profile.profilePic && profile.profilePic !== "" ? `http://localhost:5000${profile.profilePic}` : "https://ui-avatars.com/api/?name=" + encodeURIComponent(profile.name || "User")}
           alt="Profile"
           style={{
             width: 110,

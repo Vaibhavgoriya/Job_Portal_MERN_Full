@@ -1,4 +1,5 @@
 import Application from "../models/Application.js";
+import mongoose from "mongoose";
 import { getIO } from "../utils/socket.js";
 import sendEmail from "../utils/sendEmail.js";
 
@@ -139,7 +140,8 @@ export const updateApplicationStatus = async (req, res) => {
 // ================= GET MY APPLICATIONS (USER) =================
 export const getMyApplications = async (req, res) => {
   try {
-    const userId = req.user;
+    const userIdRaw = req.user.id || req.user;
+    const userId = new mongoose.Types.ObjectId(userIdRaw);
 
     const applications = await Application.find({ userId })
       .populate({
