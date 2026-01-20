@@ -178,25 +178,25 @@ const userNavWrap = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  background: 'rgba(255,255,255,0.75)',
-  border: '1.5px solid #e0e7ef',
-  borderRadius: 22,
-  padding: '22px 40px',
-  boxShadow: '0 8px 32px rgba(60,72,88,0.13)',
-  backdropFilter: 'blur(8px)',
-  WebkitBackdropFilter: 'blur(8px)',
+  background: 'linear-gradient(90deg, #f3f6fd 0%, #e0e7ef 100%)',
+  border: '1.5px solid #d1d5db',
+  borderRadius: 24,
+  padding: '20px 44px',
+  boxShadow: '0 8px 32px rgba(60,72,88,0.10)',
+  backdropFilter: 'blur(4px)',
+  WebkitBackdropFilter: 'blur(4px)',
 };
 
 const userNavTitle = {
-  fontSize: 30,
+  fontSize: 32,
   fontWeight: 900,
-  color: '#1e293b',
+  color: '#0f172a',
   letterSpacing: 0.5,
   textShadow: '0 2px 8px rgba(99,102,241,0.10)',
-  marginRight: 18,
-  padding: '0 8px',
-  borderRadius: 8,
-  background: 'rgba(236,245,255,0.5)',
+  marginRight: 22,
+  padding: '0 14px',
+  borderRadius: 10,
+  background: 'rgba(236,245,255,0.7)',
 };
 
 const userNavBtn = {
@@ -204,7 +204,7 @@ const userNavBtn = {
   background: 'linear-gradient(90deg, #6366f1 0%, #60a5fa 100%)',
   color: '#fff',
   border: 'none',
-  borderRadius: 10,
+  borderRadius: 12,
   fontWeight: 800,
   fontSize: 17,
   letterSpacing: 0.5,
@@ -215,6 +215,7 @@ const userNavBtn = {
   textTransform: 'uppercase',
   transition: 'background 0.2s, box-shadow 0.2s',
 };
+// You can further tweak button hover and logout button styles as needed
 const userNavBtnHover = {
   background: 'linear-gradient(90deg, #4f46e5 0%, #2563eb 100%)',
 };
