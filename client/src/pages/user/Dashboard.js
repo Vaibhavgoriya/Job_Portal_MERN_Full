@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
 import ApplyJobModal from "../../components/user/ApplyJobModal";
+// import JobCard from "../../components/user/JobCard";
 
 const Dashboard = () => {
   const [jobs, setJobs] = useState([]);
@@ -10,6 +11,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedJob, setSelectedJob] = useState(null);
+  // No saved jobs state, just show a colored icon for design
   const navigate = useNavigate();
   
   const handleApplications = () => {
@@ -57,6 +59,36 @@ const Dashboard = () => {
   const handleProfile = () => {
     navigate("/user/profile"); // Change route as per your app
   };
+  const handleSavedJobs = () => {
+    navigate("/user/saved-jobs");
+  };
+
+  // Saved jobs state (IDs) synced with backend
+  const [savedJobs, setSavedJobs] = useState([]);
+
+  // Fetch saved jobs from backend on mount
+  useEffect(() => {
+    const fetchSaved = async () => {
+      try {
+        const res = await axios.get("/users/saved-jobs");
+        setSavedJobs(Array.isArray(res.data) ? res.data.map(j => j._id) : []);
+      } catch {}
+    };
+    fetchSaved();
+  }, []);
+
+  // Save/unsave job using backend
+  const handleSaveJob = async (job) => {
+    try {
+      const res = await axios.post(
+        "/users/toggle-save-job",
+        { jobId: job._id }
+      );
+      if (res.data && Array.isArray(res.data.savedJobs)) {
+        setSavedJobs(res.data.savedJobs.map(j => (typeof j === 'object' ? j._id : j)));
+      }
+    } catch {}
+  };
 
   const cards = useMemo(() => {
     return jobs
@@ -71,6 +103,7 @@ const Dashboard = () => {
       .map((job) => {
         const tech = job.Technology ?? job.technology ?? job.technologyName ?? "-";
         const exp = job.Experience ?? job.experience ?? job.experienceValue ?? "-";
+        const isSaved = savedJobs.includes(job._id);
         return (
           <div key={job._id} style={card}>
             <div style={cardTop}>
@@ -83,7 +116,6 @@ const Dashboard = () => {
                 <span style={pillSecondary}>{job.location || "-"}</span>
               </div>
             </div>
-
             <div style={metaGrid}>
               <div>
                 <div style={metaLabel}>Technology</div>
@@ -94,18 +126,30 @@ const Dashboard = () => {
                 <div style={metaValue}>{exp}</div>
               </div>
             </div>
-
             <div style={desc}>{job.description || ""}</div>
-
-            <div style={actions}>
-              <button style={applyBtn} onClick={() => setSelectedJob(job)}>
+            <div style={{ ...actions, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button
+                style={{ ...applyBtn, margin: 0 }}
+                onClick={() => setSelectedJob(job)}
+              >
                 Apply Now
+              </button>
+              <div style={{ flex: 1 }} />
+              <button
+                style={{
+                  ...applyBtn,
+                  background: isSaved ? 'linear-gradient(90deg, #f59e42 0%, #fbbf24 100%)' : 'linear-gradient(90deg, #64748b 0%, #94a3b8 100%)',
+                  margin: 0,
+                }}
+                onClick={() => handleSaveJob(job)}
+              >
+                {isSaved ? 'Saved' : 'Save Job'}
               </button>
             </div>
           </div>
         );
       });
-  }, [jobs, locationFilter, techFilter]);
+  }, [jobs, locationFilter, techFilter, savedJobs]);
 
   return (
     <div style={page}>
@@ -118,9 +162,12 @@ const Dashboard = () => {
           <button onClick={handleProfile} style={userNavBtn} onMouseOver={e => e.currentTarget.style.background = userNavBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userNavBtn.background}>
             My Profile
           </button>
-            <button onClick={handleApplications} style={userNavBtn} onMouseOver={e => e.currentTarget.style.background = userNavBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userNavBtn.background}>
-              My Applications
-            </button>
+          <button onClick={handleApplications} style={userNavBtn} onMouseOver={e => e.currentTarget.style.background = userNavBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userNavBtn.background}>
+            My Applications
+          </button>
+          <button onClick={handleSavedJobs} style={userNavBtn} onMouseOver={e => e.currentTarget.style.background = userNavBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userNavBtn.background}>
+            Saved Jobs
+          </button>
         </div>
         <button onClick={handleLogout} style={userLogoutBtn} onMouseOver={e => e.currentTarget.style.background = userLogoutBtnHover.background} onMouseOut={e => e.currentTarget.style.background = userLogoutBtn.background}>
           Logout

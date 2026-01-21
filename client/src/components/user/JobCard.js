@@ -1,12 +1,33 @@
+
 import React from "react";
 
-const JobCard = ({ job, onApply }) => {
+const JobCard = ({ job, onApply, onSave, isSaved }) => {
   // Support both lowercase and capitalized fields for robustness
   const tech = job.technology || job.Technology || [];
   const exp = job.experience || job.Experience || "-";
   return (
     <div style={card}>
-      <h4>{job.title}</h4>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h4 style={{ margin: 0 }}>{job.title}</h4>
+        {onSave && (
+          <button
+            onClick={() => onSave(job)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 22,
+              color: isSaved ? '#f59e42' : '#64748b',
+              marginLeft: 8,
+              outline: 'none',
+              padding: 0,
+            }}
+            title={isSaved ? 'Unsave Job' : 'Save Job'}
+          >
+            {isSaved ? '★' : '☆'}
+          </button>
+        )}
+      </div>
       <div style={{ fontSize: 12, color: "#555", marginBottom: 6 }}>
         {job.company} • {job.location} • {job.salary || 'Not specified'}
       </div>

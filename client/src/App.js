@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 // USER PAGES
 import Login from "./pages/user/Login";
 import Register from "./pages/user/Register";
 import Dashboard from "./pages/user/Dashboard";
 import Jobs from "./pages/user/Jobs";
 import MyApplications from "./pages/user/MyApplications";
+import SavedJobs from "./pages/user/SavedJobs";
 
 import UserProfile from "./pages/user/UserProfile";
 import UserForgotPassword from "./pages/user/UserForgotPassword";
@@ -33,6 +35,7 @@ function App() {
         <Route path="/user/dashboard" element={<Dashboard />} />
         <Route path="/user/jobs" element={<Jobs />} />
         <Route path="/user/my-applications" element={<MyApplications />} />
+        <Route path="/user/saved-jobs" element={<SavedJobs />} />
         <Route path="/user/profile" element={<UserPrivateRoute><UserProfile /></UserPrivateRoute>} />
         <Route path="/user/forgot-password" element={<UserForgotPassword />} />
         <Route path="/user/verify-otp" element={<UserOtpVerify />} />
