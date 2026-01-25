@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "../../api/axios";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const AdminForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -9,10 +10,10 @@ const AdminForgotPassword = () => {
   const sendOtp = async () => {
     try {
       await axios.post("/admin/forgot-password", { email });
-      alert("OTP sent to admin email");
+      toast.success("OTP sent to admin email");
       navigate("/admin/verify-otp", { state: { email } });
     } catch (err) {
-      alert(err.response?.data?.message || "Error");
+      toast.error(err.response?.data?.message || "Error");
     }
   };
 

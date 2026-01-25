@@ -19,10 +19,10 @@
 //       localStorage.setItem("admin", JSON.stringify(res.data.admin));
 //       localStorage.setItem("adminToken", res.data.token);
 
-//       alert("Login successful");
+//       toast.success("Login successful");
 //       navigate("/admin/dashboard");
 //     } catch (err) {
-//       alert("Login failed");
+//       toast.error("Login failed");
 //     }
 //   };
 
@@ -56,6 +56,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
+import { toast } from "react-toastify";
 
 function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -72,10 +73,10 @@ function AdminLogin() {
       localStorage.setItem("role", "admin");
       localStorage.setItem("admin", JSON.stringify(res.data.admin));
       localStorage.setItem("adminToken", res.data.token);
-      alert("Login successful");
+      toast.success("Login successful");
       navigate("/admin/dashboard");
     } catch (err) {
-      alert("Login failed");
+      toast.error("Login failed");
     }
   };
 

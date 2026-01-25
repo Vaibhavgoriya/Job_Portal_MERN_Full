@@ -15,9 +15,9 @@
 //     { name, email, password }
 //   );
 
-//   alert(res.data.message);
+//   toast.success(res.data.message);
 // } catch (error) {
-//   alert(error.response.data.message);
+//   toast.error(error.response.data.message);
 // }
 
 //   };
@@ -45,6 +45,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
+import { toast } from "react-toastify";
 
 function AdminRegister() {
   const [name, setName] = useState("");
@@ -59,7 +60,7 @@ function AdminRegister() {
         "http://localhost:5000/api/admin/register",
         { name, email, password }
       );
-      alert("Admin registered successfully");
+      toast.success("Admin registered successfully");
       navigate("/admin/login");
     } catch (error) {
       if (
@@ -68,10 +69,10 @@ function AdminRegister() {
         error.response.data.message &&
         error.response.data.message.toLowerCase().includes("already")
       ) {
-        alert("You are Already Registered. Please Login.");
+        toast.info("You are Already Registered. Please Login.");
         navigate("/admin/login");
       } else {
-        alert("Admin register failed");
+        toast.error("Admin register failed");
       }
     }
   };

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
+import { toast } from "react-toastify";
 
 function Register() {
   const [name, setName] = useState("");
@@ -12,16 +13,16 @@ function Register() {
     e.preventDefault();
     try {
       await axios.post("/users/register", { name, email, password });
-      alert("User registered successfully");
+      toast.success("User registered successfully");
       navigate("/user/login");
     } catch (error) {
       const msg = error?.response?.data?.message;
       if (msg && msg.toLowerCase().includes("already")) {
-        alert("You are Already Registered. Please Login.");
+        toast.info("You are Already Registered. Please Login.");
         navigate("/user/login");
         return;
       }
-      alert(msg || "User register failed");
+      toast.error(msg || "User register failed");
     }
   };
 

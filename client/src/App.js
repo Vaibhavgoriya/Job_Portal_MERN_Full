@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // USER PAGES
 import Login from "./pages/user/Login";
@@ -27,6 +29,15 @@ function App() {
   const UserPrivateRoute = require("./routes/UserPrivateRoute").default;
   return (
     <BrowserRouter>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        theme="dark"
+      />
       <Routes>
         <Route path="/" element={<Navigate to="/user/login" />} />
         {/* USER ROUTES */}
@@ -36,7 +47,14 @@ function App() {
         <Route path="/user/jobs" element={<Jobs />} />
         <Route path="/user/my-applications" element={<MyApplications />} />
         <Route path="/user/saved-jobs" element={<SavedJobs />} />
-        <Route path="/user/profile" element={<UserPrivateRoute><UserProfile /></UserPrivateRoute>} />
+        <Route
+          path="/user/profile"
+          element={
+            <UserPrivateRoute>
+              <UserProfile />
+            </UserPrivateRoute>
+          }
+        />
         <Route path="/user/forgot-password" element={<UserForgotPassword />} />
         <Route path="/user/verify-otp" element={<UserOtpVerify />} />
         <Route path="/user/reset-password" element={<UserResetPassword />} />
@@ -46,7 +64,10 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/add-job" element={<AddJob />} />
         <Route path="/admin/applications" element={<Applications />} />
-        <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+        <Route
+          path="/admin/forgot-password"
+          element={<AdminForgotPassword />}
+        />
         <Route path="/admin/verify-otp" element={<AdminOtpVerify />} />
         <Route path="/admin/reset-password" element={<AdminResetPassword />} />
         <Route path="*" element={<h2>Page Not Found</h2>} />
@@ -54,7 +75,5 @@ function App() {
     </BrowserRouter>
   );
 }
-
-
 
 export default App;

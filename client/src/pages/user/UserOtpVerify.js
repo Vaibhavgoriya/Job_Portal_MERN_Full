@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
+import { toast } from "react-toastify";
 
 function UserOtpVerify() {
   const [otp, setOtp] = useState("");
@@ -26,10 +27,10 @@ function UserOtpVerify() {
     setLoading(true);
     try {
       await axios.post("/users/verify-otp", { email, otp });
-      alert("OTP verified");
+      toast.success("OTP verified");
       navigate("/user/reset-password", { state: { email } });
     } catch (err) {
-      alert("Invalid OTP");
+      toast.error("Invalid OTP");
     }
     setLoading(false);
   };
@@ -38,11 +39,11 @@ function UserOtpVerify() {
     setLoading(true);
     try {
       await axios.post("/users/forgot-password", { email });
-      alert("OTP resent to your email");
+      toast.success("OTP resent to your email");
       setTimer(60);
       setResendActive(false);
     } catch (err) {
-      alert("Failed to resend OTP");
+      toast.error("Failed to resend OTP");
     }
     setLoading(false);
   };

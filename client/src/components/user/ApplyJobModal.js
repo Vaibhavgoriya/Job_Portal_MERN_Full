@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import axios from "../../api/axios";
+import { toast } from "react-toastify";
 
 const ApplyJobModal = ({ job, open, onClose, onSuccess }) => {
   // ...existing code...
@@ -46,7 +47,7 @@ const ApplyJobModal = ({ job, open, onClose, onSuccess }) => {
       });
       onSuccess && onSuccess();
       onClose();
-      alert("Application submitted successfully!");
+      toast.success("Application submitted successfully!");
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to submit application");
     } finally {

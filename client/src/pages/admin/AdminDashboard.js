@@ -9,7 +9,7 @@
 
 //   useEffect(() => {
 //     const token = localStorage.getItem("token");
-//     if (!token) return alert("Please login as admin");
+//     if (!token) return toast.error("Please login as admin");
 
 //     let socket;
 
@@ -18,7 +18,7 @@
 //       .then((res) => setApps(res.data))
 //       .catch((err) => {
 //         console.error(err);
-//         alert("Error loading applications");
+//         toast.error("Error loading applications");
 //       })
 //       .finally(() => {
 //         // connect socket after initial load and send admin token for auth
@@ -60,7 +60,7 @@
 
 //   const handleJobAdded = (job) => {
 //     console.log("Job added by admin", job);
-//     alert("Job added successfully");
+//     toast.success("Job added successfully");
 //   };
 
 //   const openAppDetails = (app) => setSelectedApp(app);
@@ -125,13 +125,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import AddJob from "./AddJob";
+import { toast } from "react-toastify";
 
 function AdminDashboard() {
   const [apps, setApps] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return alert("Please login as admin");
+    if (!token) return toast.error("Please login as admin");
 
     let socket;
 
@@ -140,7 +141,7 @@ function AdminDashboard() {
       .then((res) => setApps(res.data))
       .catch((err) => {
         console.error(err);
-        alert("Error loading applications");
+        toast.error("Error loading applications");
       })
       .finally(() => {
         const serverUrl = process.env.REACT_APP_SERVER_URL || "http://localhost:5000";
@@ -201,13 +202,13 @@ function AdminDashboard() {
         url = "/admin/applications/reject";
         msg = "Mail sent successfully.";
       } else {
-        alert("Invalid status");
+        toast.error("Invalid status");
         return;
       }
       await axios.post(url, { applicationId: id, userEmail: email }, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      alert(msg);
+      toast.info(msg);
       setApps((prev) =>
         prev.map((app) =>
           app._id === id ? { ...app, status } : app
@@ -218,7 +219,7 @@ function AdminDashboard() {
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to send mail.");
+      toast.error("Failed to send mail.");
     }
   };
   // ------------------------------------------------------

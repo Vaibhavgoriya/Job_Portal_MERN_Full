@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "../../api/axios";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const AdminResetPassword = () => {
   const { state } = useLocation();
@@ -17,10 +18,10 @@ const AdminResetPassword = () => {
         email,
         newPassword: password,
       });
-      alert("Admin password updated");
+      toast.success("Admin password updated");
       navigate("/admin/login");
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to reset password");
+      toast.error(err.response?.data?.message || "Failed to reset password");
     }
   };
 

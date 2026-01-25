@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "../../api/axios";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const UserProfile = () => {
   const [profile, setProfile] = useState({
@@ -74,9 +75,9 @@ const UserProfile = () => {
       const updated = await axios.get("/users/profile");
       setProfile(updated.data);
       setEdit(false);
-      alert("Profile updated");
+      toast.success("Profile updated");
     } catch (err) {
-      alert("Failed to update profile");
+      toast.error("Failed to update profile");
     }
     setLoading(false);
   };
