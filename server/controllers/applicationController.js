@@ -2,6 +2,7 @@ import Application from "../models/Application.js";
 import mongoose from "mongoose";
 import { getIO } from "../utils/socket.js";
 import sendEmail from "../utils/sendEmail.js";
+import path from "path";
 
 // ================= APPLY JOB =================
 export const applyJob = async (req, res) => {
@@ -35,11 +36,13 @@ export const applyJob = async (req, res) => {
       strictPopulate: false,
     });
 
+    // Always use only the filename for resumeUrl
+    const resumeFileName = path.basename(application.resume);
     const payload = {
       _id: application._id,
       user: application.userId,
       job: application.jobId,
-      resumeUrl: `/uploads/resumes/${application.resume}`,
+      resumeUrl: `/uploads/resumes/${resumeFileName}`,
       createdAt: application.createdAt,
       status: application.status,
     };
