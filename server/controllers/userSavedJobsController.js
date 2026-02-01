@@ -4,13 +4,11 @@ import Job from '../models/Job.js';
 // Get all saved jobs for the logged-in user
 export const getSavedJobs = async (req, res) => {
   try {
-    console.log('getSavedJobs called, user id:', req.user?.id);
     const user = await User.findById(req.user.id).populate('savedJobs');
     if (!user) {
       console.log('User not found');
       return res.status(404).json({ message: 'User not found' });
     }
-    console.log('Saved jobs:', user.savedJobs);
     res.json(user.savedJobs || []);
   } catch (err) {
     console.error('getSavedJobs error:', err);

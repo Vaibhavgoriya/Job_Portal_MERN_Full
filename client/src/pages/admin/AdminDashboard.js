@@ -1,7 +1,6 @@
 import axios from "../../api/axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { io } from "socket.io-client";
 import AddJob from "./AddJob";
 import { toast } from "react-toastify";
 
@@ -11,69 +10,47 @@ function AdminDashboard() {
   const navigate = useNavigate();
   const [view, setView] = useState("applications");
   const [selectedApp, setSelectedApp] = useState(null);
-  const [socketConnected, setSocketConnected] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Please login as admin");
-      navigate("/admin/login");
-      return;
-    }
-
-    let socket;
-
-    setLoading(true);
-    axios
-      .get("/admin/applications", { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => {
-        setApps(res.data);
-      })
-      .catch((err) => {
-        console.error(err);
-        toast.error("Error loading applications");
-      })
-      .finally(() => {
-        setLoading(false);
-        const serverUrl = process.env.REACT_APP_SERVER_URL || "http://localhost:5000";
-        const adminToken = localStorage.getItem("token");
-        socket = io(serverUrl, { 
-          auth: { token: adminToken },
-          transports: ['websocket', 'polling']
-        });
-
-        socket.on("connect", () => {
-          console.log("Socket connected", socket.id);
-          setSocketConnected(true);
-          toast.info("Real-time updates connected");
-        });
-
-        socket.on("newApplication", (newApp) => {
-          console.log("New application received", newApp);
-          toast.info(`New application from ${newApp.user?.name || "User"}`);
-          setApps((prev) => [newApp, ...prev]);
-        });
-
-        socket.on("disconnect", () => {
-          console.log("Socket disconnected");
-          setSocketConnected(false);
-          toast.warning("Real-time updates disconnected");
-        });
-
-        socket.on("connect_error", (err) => {
-          console.error("Socket connection error:", err);
-          toast.error("Real-time connection failed");
-        });
-      });
-
-    return () => {
-      if (socket) {
-        socket.disconnect();
-        setSocketConnected(false);
+  // Function to fetch applications
+  const fetchApplications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Please login as admin");
+        navigate("/admin/login");
+        return;
       }
-    };
+
+      const res = await axios.get("/admin/applications", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setApps(res.data);
+    } catch (err) {
+      console.error(err);
+      if (err.response?.status !== 401) {
+        toast.error("Error loading applications");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch applications on component mount
+  useEffect(() => {
+    fetchApplications();
+
+    // Set up polling for updates every 10 seconds
+    const pollInterval = setInterval(() => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        fetchApplications();
+      }
+    }, 10000); // Poll every 10 seconds
+
+    // Clean up interval on component unmount
+    return () => clearInterval(pollInterval);
   }, [navigate]);
 
   const logout = () => {
@@ -86,7 +63,9 @@ function AdminDashboard() {
   };
 
   const handleJobAdded = () => {
-    // Toast will be shown from AddJob component
+    // Refresh applications when a new job is added
+    fetchApplications();
+    toast.success("New job posted successfully!");
   };
 
   const openAppDetails = (app) => setSelectedApp(app);
@@ -97,8 +76,9 @@ function AdminDashboard() {
       const token = localStorage.getItem("token");
       let url = "";
       let msg = "";
-      const email = arguments.length === 3 ? arguments[2] : selectedApp?.user?.email;
-      
+      const email =
+        arguments.length === 3 ? arguments[2] : selectedApp?.user?.email;
+
       if (status === "approved") {
         url = "/admin/applications/approve";
         msg = "Application approved and email sent successfully";
@@ -109,64 +89,93 @@ function AdminDashboard() {
         toast.error("Invalid status");
         return;
       }
-      
-      await axios.post(url, { 
-        applicationId: id, 
-        userEmail: email 
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      toast.success(msg);
-      setApps((prev) =>
-        prev.map((app) =>
-          app._id === id ? { ...app, status } : app
-        )
+
+      await axios.post(
+        url,
+        {
+          applicationId: id,
+          userEmail: email,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
-      
+
+      toast.success(msg);
+
+      // Update local state
+      setApps((prev) =>
+        prev.map((app) => (app._id === id ? { ...app, status } : app)),
+      );
+
       if (selectedApp?._id === id) {
         setSelectedApp({ ...selectedApp, status });
       }
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Failed to update application status");
+      toast.error(
+        err.response?.data?.message || "Failed to update application status",
+      );
     }
   };
 
   const getStatusColor = (status) => {
-    switch(status?.toLowerCase()) {
-      case 'approved': return '#10B981';
-      case 'rejected': return '#EF4444';
-      default: return '#F59E0B';
+    switch (status?.toLowerCase()) {
+      case "approved":
+        return "#10B981";
+      case "rejected":
+        return "#EF4444";
+      default:
+        return "#F59E0B";
     }
   };
 
   const getStatusIcon = (status) => {
-    switch(status?.toLowerCase()) {
-      case 'approved': return '✓';
-      case 'rejected': return '✗';
-      default: return '⟳';
+    switch (status?.toLowerCase()) {
+      case "approved":
+        return "✓";
+      case "rejected":
+        return "✗";
+      default:
+        return "⟳";
     }
   };
 
   // Filter applications based on search and status
-  const filteredApps = apps.filter(app => {
-    const matchesSearch = app.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         app.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         app.job?.title?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'pending' && (!app.status || app.status.toLowerCase() === 'pending')) ||
-                         (statusFilter === 'approved' && app.status?.toLowerCase() === 'approved') ||
-                         (statusFilter === 'rejected' && app.status?.toLowerCase() === 'rejected');
-    
+  const filteredApps = apps.filter((app) => {
+    const matchesSearch =
+      app.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.job?.title?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "pending" &&
+        (!app.status || app.status.toLowerCase() === "pending")) ||
+      (statusFilter === "approved" &&
+        app.status?.toLowerCase() === "approved") ||
+      (statusFilter === "rejected" && app.status?.toLowerCase() === "rejected");
+
     return matchesSearch && matchesStatus;
   });
 
   // Calculate stats
-  const pendingCount = apps.filter(app => !app.status || app.status.toLowerCase() === 'pending').length;
-  const approvedCount = apps.filter(app => app.status?.toLowerCase() === 'approved').length;
-  const rejectedCount = apps.filter(app => app.status?.toLowerCase() === 'rejected').length;
+  const pendingCount = apps.filter(
+    (app) => !app.status || app.status.toLowerCase() === "pending",
+  ).length;
+  const approvedCount = apps.filter(
+    (app) => app.status?.toLowerCase() === "approved",
+  ).length;
+  const rejectedCount = apps.filter(
+    (app) => app.status?.toLowerCase() === "rejected",
+  ).length;
+
+  // Manual refresh function
+  const refreshApplications = () => {
+    setLoading(true);
+    fetchApplications();
+    toast.info("Refreshing applications...");
+  };
 
   return (
     <div className="admin-dashboard">
@@ -177,32 +186,91 @@ function AdminDashboard() {
             <div className="logo">
               <div className="logo-icon">
                 <svg viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M8 7H16M8 12H16M8 17H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="2"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M8 7H16M8 12H16M8 17H12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </div>
               <div className="logo-text">
-                <h1>Recruit<span>Flow</span></h1>
+                <h1>
+                  Recruit<span>Flow</span>
+                </h1>
                 <p className="tagline">Enterprise Recruitment Platform</p>
               </div>
             </div>
           </div>
-          
+
           <div className="header-right">
-            <div className={`connection-indicator ${socketConnected ? 'connected' : 'disconnected'}`}>
-              <div className="indicator-dot"></div>
-              <span>{socketConnected ? 'Live' : 'Offline'}</span>
+            <div className="refresh-section">
+              <button
+                onClick={refreshApplications}
+                className="refresh-btn"
+                disabled={loading}
+              >
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M23 4v6h-6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M1 20v-6h6"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                Refresh
+              </button>
+              <div className="polling-indicator">
+                <div className="polling-dot"></div>
+                <span>Auto-refresh: 10s</span>
+              </div>
             </div>
-            
+
             <div className="user-menu">
               <div className="user-avatar">
                 <span>A</span>
               </div>
               <button onClick={logout} className="logout-btn">
                 <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M16 17L21 12L16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path
+                    d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M16 17L21 12L16 7"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M21 12H9"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 Logout
               </button>
@@ -217,23 +285,23 @@ function AdminDashboard() {
           <nav className="sidebar-nav">
             <div className="nav-section">
               <h3 className="nav-title">Navigation</h3>
-              <button 
-                className={`nav-item ${view === "applications" ? 'active' : ''}`}
+              <button
+                className={`nav-item ${view === "applications" ? "active" : ""}`}
                 onClick={() => setView("applications")}
               >
                 <span className="nav-icon">📋</span>
                 <span className="nav-label">Applications</span>
                 <span className="nav-badge">{apps.length}</span>
               </button>
-              <button 
-                className={`nav-item ${view === "add" ? 'active' : ''}`}
+              <button
+                className={`nav-item ${view === "add" ? "active" : ""}`}
                 onClick={() => setView("add")}
               >
                 <span className="nav-icon">+</span>
                 <span className="nav-label">Post Job</span>
               </button>
             </div>
-            
+
             <div className="nav-section">
               <h3 className="nav-title">Quick Stats</h3>
               <div className="stats">
@@ -251,7 +319,7 @@ function AdminDashboard() {
                 </div>
               </div>
             </div>
-            
+
             <div className="nav-footer">
               <p className="version">v2.1.0</p>
               <p className="copyright">© 2024 RecruitFlow</p>
@@ -264,7 +332,9 @@ function AdminDashboard() {
             <div className="content-section">
               <div className="section-header">
                 <h2>Post New Job</h2>
-                <p className="section-description">Create and publish new job opportunities</p>
+                <p className="section-description">
+                  Create and publish new job opportunities
+                </p>
               </div>
               <AddJob onAdded={handleJobAdded} />
             </div>
@@ -274,24 +344,44 @@ function AdminDashboard() {
                 <div className="header-main">
                   <h2>Applications</h2>
                   <p className="section-description">
-                    {loading ? 'Loading...' : `${filteredApps.length} applications found`}
+                    {loading
+                      ? "Loading..."
+                      : `${filteredApps.length} applications found`}
+                    <span className="last-updated">
+                      {!loading &&
+                        ` • Last updated: ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                    </span>
                   </p>
                 </div>
                 <div className="header-actions">
                   <div className="search-box">
                     <svg viewBox="0 0 24 24" fill="none">
-                      <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M21 21L16.65 16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      <circle
+                        cx="11"
+                        cy="11"
+                        r="8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      />
+                      <path
+                        d="M21 21L16.65 16.65"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
                     </svg>
-                    <input 
-                      type="text" 
-                      placeholder="Search applications..." 
+                    <input
+                      type="text"
+                      placeholder="Search applications..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
                   <div className="filter-dropdown">
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
                       <option value="all">All Applications</option>
                       <option value="pending">Pending Review</option>
                       <option value="approved">Approved</option>
@@ -310,18 +400,41 @@ function AdminDashboard() {
                 <div className="empty-state">
                   <div className="empty-illustration">
                     <svg viewBox="0 0 100 100" fill="none">
-                      <path d="M30 40L50 60L70 40" stroke="#667eea" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <rect x="20" y="20" width="60" height="60" rx="8" stroke="#667eea" strokeWidth="2"/>
+                      <path
+                        d="M30 40L50 60L70 40"
+                        stroke="#667eea"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <rect
+                        x="20"
+                        y="20"
+                        width="60"
+                        height="60"
+                        rx="8"
+                        stroke="#667eea"
+                        strokeWidth="2"
+                      />
                     </svg>
                   </div>
                   <h3>No applications found</h3>
                   <p>Try adjusting your search or filter criteria</p>
-                  {searchQuery || statusFilter !== 'all' ? (
-                    <button onClick={() => {setSearchQuery(''); setStatusFilter('all')}} className="primary-btn">
+                  {searchQuery || statusFilter !== "all" ? (
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setStatusFilter("all");
+                      }}
+                      className="primary-btn"
+                    >
                       Clear Filters
                     </button>
                   ) : (
-                    <button onClick={() => setView("add")} className="primary-btn">
+                    <button
+                      onClick={() => setView("add")}
+                      className="primary-btn"
+                    >
                       Post Your First Job
                     </button>
                   )}
@@ -342,57 +455,73 @@ function AdminDashboard() {
                       <span className="stat-card-label">Rejected</span>
                     </div>
                   </div>
-                  
+
                   <div className="applications-grid">
                     {filteredApps.map((app) => (
-                      <div 
-                        key={app._id} 
+                      <div
+                        key={app._id}
                         className="application-card"
                         onClick={() => openAppDetails(app)}
                       >
                         <div className="card-header">
                           <div className="applicant-info">
                             <div className="applicant-avatar">
-                              {app.user?.name?.charAt(0) || 'U'}
+                              {app.user?.name?.charAt(0) || "U"}
                             </div>
                             <div className="applicant-details">
-                              <h3 className="applicant-name">{app.user?.name || 'Candidate'}</h3>
-                              <p className="applicant-email">{app.user?.email || 'No email'}</p>
+                              <h3 className="applicant-name">
+                                {app.user?.name || "Candidate"}
+                              </h3>
+                              <p className="applicant-email">
+                                {app.user?.email || "No email"}
+                              </p>
                             </div>
                           </div>
-                          <div 
+                          <div
                             className="application-status"
-                            style={{ backgroundColor: getStatusColor(app.status) }}
+                            style={{
+                              backgroundColor: getStatusColor(app.status),
+                            }}
                           >
-                            {getStatusIcon(app.status)} {app.status || 'Pending'}
+                            {getStatusIcon(app.status)}{" "}
+                            {app.status || "Pending"}
                           </div>
                         </div>
-                        
+
                         <div className="card-body">
-                          <h4 className="job-title">{app.job?.title || 'Position'}</h4>
-                          <p className="job-company">{app.job?.company || 'Company'}</p>
-                          
+                          <h4 className="job-title">
+                            {app.job?.title || "Position"}
+                          </h4>
+                          <p className="job-company">
+                            {app.job?.company || "Company"}
+                          </p>
+
                           <div className="application-meta">
                             <div className="meta-item">
                               <span className="meta-label">Applied</span>
                               <span className="meta-value">
                                 {app.createdAt
-                                  ? new Date(app.createdAt).toLocaleDateString('en-US', {
-                                      month: 'short',
-                                      day: 'numeric'
-                                    })
-                                  : '--'}
+                                  ? new Date(app.createdAt).toLocaleDateString(
+                                      "en-US",
+                                      {
+                                        month: "short",
+                                        day: "numeric",
+                                      },
+                                    )
+                                  : "--"}
                               </span>
                             </div>
                             {app.resumeUrl && (
                               <div className="meta-item">
                                 <span className="meta-label">Resume</span>
-                                <span className="meta-value available">Available</span>
+                                <span className="meta-value available">
+                                  Available
+                                </span>
                               </div>
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="card-footer">
                           <span className="view-details">View Details →</span>
                         </div>
@@ -413,50 +542,52 @@ function AdminDashboard() {
             <div className="modal-header">
               <div>
                 <h2>Application Review</h2>
-                <p className="modal-subtitle">ID: {selectedApp._id?.slice(-8).toUpperCase()}</p>
+                <p className="modal-subtitle">
+                  ID: {selectedApp._id?.slice(-8).toUpperCase()}
+                </p>
               </div>
               <button onClick={closeAppDetails} className="modal-close">
                 ×
               </button>
             </div>
-            
+
             <div className="modal-body">
               <div className="modal-section">
                 <h3>Candidate Details</h3>
                 <div className="detail-grid">
                   <div className="detail-item">
                     <label>Full Name</label>
-                    <p>{selectedApp.user?.name || 'Not specified'}</p>
+                    <p>{selectedApp.user?.name || "Not specified"}</p>
                   </div>
                   <div className="detail-item">
                     <label>Email Address</label>
-                    <p>{selectedApp.user?.email || 'Not provided'}</p>
+                    <p>{selectedApp.user?.email || "Not provided"}</p>
                   </div>
                   <div className="detail-item">
                     <label>Contact</label>
-                    <p>{selectedApp.user?.phone || 'Not provided'}</p>
+                    <p>{selectedApp.user?.phone || "Not provided"}</p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="modal-section">
                 <h3>Job Details</h3>
                 <div className="detail-grid">
                   <div className="detail-item">
                     <label>Position</label>
-                    <p>{selectedApp.job?.title || 'Not specified'}</p>
+                    <p>{selectedApp.job?.title || "Not specified"}</p>
                   </div>
                   <div className="detail-item">
                     <label>Company</label>
-                    <p>{selectedApp.job?.company || 'Not specified'}</p>
+                    <p>{selectedApp.job?.company || "Not specified"}</p>
                   </div>
                   <div className="detail-item">
                     <label>Location</label>
-                    <p>{selectedApp.job?.location || 'Not specified'}</p>
+                    <p>{selectedApp.job?.location || "Not specified"}</p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="modal-section">
                 <h3>Application Info</h3>
                 <div className="detail-grid">
@@ -464,42 +595,77 @@ function AdminDashboard() {
                     <label>Applied On</label>
                     <p>
                       {selectedApp.createdAt
-                        ? new Date(selectedApp.createdAt).toLocaleString('en-US', {
-                            dateStyle: 'medium',
-                            timeStyle: 'short'
-                          })
-                        : 'Not available'}
+                        ? new Date(selectedApp.createdAt).toLocaleString(
+                            "en-US",
+                            {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            },
+                          )
+                        : "Not available"}
                     </p>
                   </div>
                   <div className="detail-item">
                     <label>Current Status</label>
                     <div className="status-display">
-                      <span 
+                      <span
                         className="status-indicator"
-                        style={{ backgroundColor: getStatusColor(selectedApp.status) }}
+                        style={{
+                          backgroundColor: getStatusColor(selectedApp.status),
+                        }}
                       ></span>
-                      <span>{selectedApp.status || 'Pending Review'}</span>
+                      <span>{selectedApp.status || "Pending Review"}</span>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               {selectedApp.resumeUrl && (
                 <div className="modal-section">
                   <h3>Attachments</h3>
                   <div className="attachment-section">
-                    <a 
-                      href={`${process.env.REACT_APP_SERVER_URL || 'http://localhost:5000'}${selectedApp.resumeUrl}`}
-                      target="_blank" 
-                      rel="noreferrer" 
+                    <a
+                      href={`${process.env.REACT_APP_SERVER_URL || "http://localhost:5000"}${selectedApp.resumeUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
                       className="attachment-link"
                     >
                       <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="2"/>
-                        <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        <polyline points="10 9 9 9 8 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        <path
+                          d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        />
+                        <polyline
+                          points="14 2 14 8 20 8"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                        <line
+                          x1="16"
+                          y1="13"
+                          x2="8"
+                          y2="13"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                        <line
+                          x1="16"
+                          y1="17"
+                          x2="8"
+                          y2="17"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                        <polyline
+                          points="10 9 9 9 8 9"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
                       </svg>
                       View Resume
                     </a>
@@ -507,10 +673,10 @@ function AdminDashboard() {
                 </div>
               )}
             </div>
-            
+
             <div className="modal-footer">
               <div className="modal-actions">
-                <button 
+                <button
                   onClick={closeAppDetails}
                   className="action-btn secondary"
                 >
@@ -518,37 +684,42 @@ function AdminDashboard() {
                 </button>
                 <div className="primary-actions">
                   {/* PENDING STATUS */}
-                  {(!selectedApp.status || selectedApp.status.toLowerCase() === 'pending') && (
+                  {(!selectedApp.status ||
+                    selectedApp.status.toLowerCase() === "pending") && (
                     <>
-                      <button 
-                        onClick={() => handleStatus(selectedApp._id, 'approved')}
+                      <button
+                        onClick={() =>
+                          handleStatus(selectedApp._id, "approved")
+                        }
                         className="action-btn success"
                       >
                         Approve Application
                       </button>
-                      <button 
-                        onClick={() => handleStatus(selectedApp._id, 'rejected')}
+                      <button
+                        onClick={() =>
+                          handleStatus(selectedApp._id, "rejected")
+                        }
                         className="action-btn danger"
                       >
                         Reject Application
                       </button>
                     </>
                   )}
-                  
+
                   {/* APPROVED STATUS */}
-                  {selectedApp.status?.toLowerCase() === 'approved' && (
-                    <button 
-                      onClick={() => handleStatus(selectedApp._id, 'rejected')}
+                  {selectedApp.status?.toLowerCase() === "approved" && (
+                    <button
+                      onClick={() => handleStatus(selectedApp._id, "rejected")}
                       className="action-btn danger"
                     >
                       Reject Application
                     </button>
                   )}
-                  
+
                   {/* REJECTED STATUS */}
-                  {selectedApp.status?.toLowerCase() === 'rejected' && (
-                    <button 
-                      onClick={() => handleStatus(selectedApp._id, 'approved')}
+                  {selectedApp.status?.toLowerCase() === "rejected" && (
+                    <button
+                      onClick={() => handleStatus(selectedApp._id, "approved")}
                       className="action-btn success"
                     >
                       Approve Application
@@ -583,23 +754,29 @@ function AdminDashboard() {
           --gray-700: #374151;
           --gray-800: #1f2937;
           --gray-900: #111827;
-          
+
           --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-          --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-          --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          --shadow-md:
+            0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          --shadow-lg:
+            0 10px 15px -3px rgba(0, 0, 0, 0.1),
+            0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          --shadow-xl:
+            0 20px 25px -5px rgba(0, 0, 0, 0.1),
+            0 10px 10px -5px rgba(0, 0, 0, 0.04);
           --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-          
+
           --border-radius-sm: 0.375rem;
           --border-radius-md: 0.5rem;
           --border-radius-lg: 0.75rem;
           --border-radius-xl: 1rem;
           --border-radius-2xl: 1.5rem;
-          
+
           --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
           --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
           --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
-          
+
           --z-index-dropdown: 1000;
           --z-index-sticky: 1020;
           --z-index-modal: 1050;
@@ -624,7 +801,16 @@ function AdminDashboard() {
         }
 
         body {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+          font-family:
+            "Inter",
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            Roboto,
+            Oxygen,
+            Ubuntu,
+            Cantarell,
+            sans-serif;
           line-height: 1.5;
           font-weight: 400;
           color: var(--gray-800);
@@ -642,7 +828,11 @@ function AdminDashboard() {
 
         /* ====== HEADER ====== */
         .header {
-          background: linear-gradient(135deg, var(--dark-color) 0%, #0f172a 100%);
+          background: linear-gradient(
+            135deg,
+            var(--dark-color) 0%,
+            #0f172a 100%
+          );
           color: white;
           padding: 0;
           box-shadow: var(--shadow-lg);
@@ -680,12 +870,6 @@ function AdminDashboard() {
           height: 2.5rem;
           color: var(--primary-light);
           flex-shrink: 0;
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
         }
 
         .logo-text {
@@ -704,7 +888,11 @@ function AdminDashboard() {
 
         .logo-text h1 span {
           color: var(--primary-light);
-          background: linear-gradient(135deg, var(--primary-light) 0%, #60a5fa 100%);
+          background: linear-gradient(
+            135deg,
+            var(--primary-light) 0%,
+            #60a5fa 100%
+          );
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -723,48 +911,76 @@ function AdminDashboard() {
           gap: 1.5rem;
         }
 
-        /* Connection Indicator */
-        .connection-indicator {
+        /* Refresh Section */
+        .refresh-section {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .refresh-btn {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.5rem 1rem;
+          padding: 0.625rem 1rem;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          color: white;
+          border: none;
+          border-radius: var(--border-radius-lg);
+          font-size: 0.875rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all var(--transition-base);
+          box-shadow: var(--shadow-md);
+          letter-spacing: 0.025em;
+        }
+
+        .refresh-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-lg);
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+
+        .refresh-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .refresh-btn svg {
+          width: 1rem;
+          height: 1rem;
+        }
+
+        .polling-indicator {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 0.75rem;
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: var(--border-radius-xl);
-          font-size: 0.875rem;
+          border-radius: var(--border-radius-lg);
+          font-size: 0.75rem;
           font-weight: 500;
           color: white;
-          transition: all var(--transition-base);
           backdrop-filter: blur(4px);
         }
 
-        .connection-indicator.connected {
-          background: rgba(16, 185, 129, 0.2);
-          border-color: rgba(16, 185, 129, 0.3);
-        }
-
-        .connection-indicator.disconnected {
-          background: rgba(239, 68, 68, 0.2);
-          border-color: rgba(239, 68, 68, 0.3);
-        }
-
-        .indicator-dot {
-          width: 0.625rem;
-          height: 0.625rem;
+        .polling-dot {
+          width: 0.5rem;
+          height: 0.5rem;
           border-radius: 50%;
-          position: relative;
-        }
-
-        .connection-indicator.connected .indicator-dot {
-          background: var(--success-color);
-          box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+          background: #10b981;
           animation: pulse 2s infinite;
         }
 
-        .connection-indicator.disconnected .indicator-dot {
-          background: var(--danger-color);
-          box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+        @keyframes pulse {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
         }
 
         /* User Menu */
@@ -777,7 +993,11 @@ function AdminDashboard() {
         .user-avatar {
           width: 2.5rem;
           height: 2.5rem;
-          background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+          background: linear-gradient(
+            135deg,
+            var(--primary-color) 0%,
+            var(--primary-dark) 100%
+          );
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -894,7 +1114,7 @@ function AdminDashboard() {
         }
 
         .nav-item::before {
-          content: '';
+          content: "";
           position: absolute;
           left: 0;
           top: 0;
@@ -916,7 +1136,11 @@ function AdminDashboard() {
         }
 
         .nav-item.active {
-          background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+          background: linear-gradient(
+            135deg,
+            var(--primary-color) 0%,
+            var(--primary-dark) 100%
+          );
           color: white;
           box-shadow: var(--shadow-md);
         }
@@ -927,7 +1151,11 @@ function AdminDashboard() {
         }
 
         .nav-item.active:hover {
-          background: linear-gradient(135deg, var(--primary-dark) 0%, #1e40af 100%);
+          background: linear-gradient(
+            135deg,
+            var(--primary-dark) 0%,
+            #1e40af 100%
+          );
           transform: translateX(4px);
         }
 
@@ -952,7 +1180,6 @@ function AdminDashboard() {
           border-radius: var(--border-radius-xl);
           min-width: 1.5rem;
           text-align: center;
-          animation: pulse 2s infinite;
         }
 
         /* Stats */
@@ -1057,6 +1284,12 @@ function AdminDashboard() {
           font-weight: 400;
         }
 
+        .last-updated {
+          font-size: 0.875rem;
+          color: var(--gray-500);
+          margin-left: 0.5rem;
+        }
+
         .header-actions {
           margin-top: 1.5rem;
           display: flex;
@@ -1158,6 +1391,15 @@ function AdminDashboard() {
           animation: spin 1s linear infinite;
         }
 
+        @keyframes spin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+
         .loading-state p {
           color: var(--gray-600);
           font-size: 1rem;
@@ -1200,7 +1442,11 @@ function AdminDashboard() {
 
         .primary-btn {
           padding: 0.875rem 2.5rem;
-          background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+          background: linear-gradient(
+            135deg,
+            var(--primary-color) 0%,
+            var(--primary-dark) 100%
+          );
           color: white;
           border: none;
           border-radius: var(--border-radius-lg);
@@ -1219,7 +1465,11 @@ function AdminDashboard() {
         .primary-btn:hover {
           transform: translateY(-2px);
           box-shadow: var(--shadow-lg);
-          background: linear-gradient(135deg, var(--primary-dark) 0%, #1e40af 100%);
+          background: linear-gradient(
+            135deg,
+            var(--primary-dark) 0%,
+            #1e40af 100%
+          );
         }
 
         .primary-btn:active {
@@ -1247,7 +1497,7 @@ function AdminDashboard() {
         }
 
         .stat-card::before {
-          content: '';
+          content: "";
           position: absolute;
           top: 0;
           left: 0;
@@ -1341,13 +1591,17 @@ function AdminDashboard() {
         }
 
         .application-card::before {
-          content: '';
+          content: "";
           position: absolute;
           top: 0;
           left: 0;
           right: 0;
           height: 4px;
-          background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-light) 100%);
+          background: linear-gradient(
+            90deg,
+            var(--primary-color) 0%,
+            var(--primary-light) 100%
+          );
           transform: scaleX(0);
           transition: transform var(--transition-base);
         }
@@ -1382,7 +1636,11 @@ function AdminDashboard() {
         .applicant-avatar {
           width: 3rem;
           height: 3rem;
-          background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+          background: linear-gradient(
+            135deg,
+            var(--primary-color) 0%,
+            var(--primary-dark) 100%
+          );
           color: white;
           border-radius: var(--border-radius-md);
           display: flex;
@@ -1503,7 +1761,7 @@ function AdminDashboard() {
         }
 
         .view-details::after {
-          content: '→';
+          content: "→";
           transition: transform var(--transition-base);
         }
 
@@ -1533,8 +1791,12 @@ function AdminDashboard() {
         }
 
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
 
         .modal-content {
@@ -1565,7 +1827,11 @@ function AdminDashboard() {
         .modal-header {
           padding: 2rem;
           border-bottom: 1px solid var(--gray-200);
-          background: linear-gradient(135deg, var(--dark-color) 0%, #0f172a 100%);
+          background: linear-gradient(
+            135deg,
+            var(--dark-color) 0%,
+            #0f172a 100%
+          );
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
@@ -1772,7 +2038,11 @@ function AdminDashboard() {
         }
 
         .action-btn.success {
-          background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+          background: linear-gradient(
+            135deg,
+            var(--success-color) 0%,
+            #059669 100%
+          );
           color: white;
           border: none;
         }
@@ -1784,7 +2054,11 @@ function AdminDashboard() {
         }
 
         .action-btn.danger {
-          background: linear-gradient(135deg, var(--danger-color) 0%, #dc2626 100%);
+          background: linear-gradient(
+            135deg,
+            var(--danger-color) 0%,
+            #dc2626 100%
+          );
           color: white;
           border: none;
         }
@@ -1802,7 +2076,7 @@ function AdminDashboard() {
             gap: 1.5rem;
             padding: 0 1.5rem;
           }
-          
+
           .applications-grid {
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
           }
@@ -1814,16 +2088,16 @@ function AdminDashboard() {
             margin: 1rem auto;
             padding: 0 1rem;
           }
-          
+
           .sidebar {
             position: static;
             margin-bottom: 1.5rem;
           }
-          
+
           .header-actions {
             flex-direction: column;
           }
-          
+
           .search-box,
           .filter-dropdown {
             max-width: 100%;
@@ -1839,49 +2113,49 @@ function AdminDashboard() {
             gap: 1rem;
             padding: 1rem;
           }
-          
+
           .logo {
             justify-content: center;
             text-align: center;
           }
-          
+
           .header-right {
             width: 100%;
             justify-content: space-between;
           }
-          
+
           .main-container {
             margin: 0.75rem auto;
             padding: 0.75rem;
           }
-          
+
           .section-header {
             padding: 1.5rem;
           }
-          
+
           .applications-grid {
             padding: 1.5rem;
             grid-template-columns: 1fr;
             gap: 1rem;
           }
-          
+
           .stats-cards {
             grid-template-columns: 1fr;
             padding: 1.5rem;
           }
-          
+
           .modal-content {
             max-height: 90vh;
           }
-          
+
           .modal-actions {
             flex-direction: column;
           }
-          
+
           .primary-actions {
             width: 100%;
           }
-          
+
           .action-btn {
             flex: 1;
           }
@@ -1892,29 +2166,35 @@ function AdminDashboard() {
             flex-direction: column;
             gap: 1rem;
           }
-          
+
           .user-menu {
             width: 100%;
             justify-content: space-between;
           }
-          
+
+          .refresh-section {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
+          }
+
           .application-meta {
             flex-direction: column;
             gap: 1rem;
           }
-          
+
           .modal-body {
             padding: 1.5rem;
           }
-          
+
           .modal-header {
             padding: 1.5rem;
           }
-          
+
           .modal-footer {
             padding: 1.5rem;
           }
-          
+
           .detail-grid {
             grid-template-columns: 1fr;
           }
@@ -1924,19 +2204,19 @@ function AdminDashboard() {
           .logo h1 {
             font-size: 1.25rem;
           }
-          
+
           .section-header h2 {
             font-size: 1.5rem;
           }
-          
+
           .application-card {
             padding: 0;
           }
-          
+
           .modal-content {
             border-radius: var(--border-radius-lg);
           }
-          
+
           .action-btn {
             padding: 0.75rem 1.25rem;
             font-size: 0.875rem;
@@ -1959,36 +2239,36 @@ function AdminDashboard() {
             --gray-800: #f8fafc;
             --gray-900: #ffffff;
           }
-          
+
           .admin-dashboard {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
           }
-          
+
           .header {
             background: rgba(15, 23, 42, 0.95);
           }
-          
+
           .sidebar,
           .content-section,
           .modal-content {
             background: #1e293b;
             border-color: #334155;
           }
-          
+
           .stat-item,
           .detail-item,
           .attachment-section {
             background: #334155;
             border-color: #475569;
           }
-          
+
           .search-box input,
           .filter-dropdown select {
             background: #334155;
             border-color: #475569;
             color: #f1f5f9;
           }
-          
+
           .search-box input::placeholder {
             color: #64748b;
           }
@@ -2003,19 +2283,19 @@ function AdminDashboard() {
           .modal-close {
             display: none !important;
           }
-          
+
           .main-container {
             grid-template-columns: 1fr;
             margin: 0;
             padding: 0;
           }
-          
+
           .content-section {
             box-shadow: none;
             border: none;
             border-radius: 0;
           }
-          
+
           .application-card {
             break-inside: avoid;
             page-break-inside: avoid;
@@ -2057,7 +2337,7 @@ function AdminDashboard() {
           .nav-item.active {
             border: 2px solid var(--primary-color);
           }
-          
+
           .stat-card {
             border: 2px solid currentColor;
           }
@@ -2065,12 +2345,11 @@ function AdminDashboard() {
 
         /* Reduce motion */
         @media (prefers-reduced-motion) {
-          .logo-icon,
-          .indicator-dot,
+          .polling-dot,
           .loading-spinner {
             animation: none;
           }
-          
+
           .application-card:hover,
           .nav-item:hover,
           .primary-btn:hover,

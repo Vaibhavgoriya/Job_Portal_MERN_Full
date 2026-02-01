@@ -1,6 +1,5 @@
 import Application from "../models/Application.js";
 import mongoose from "mongoose";
-import { getIO } from "../utils/socket.js";
 import sendEmail from "../utils/sendEmail.js";
 import path from "path";
 
@@ -14,7 +13,18 @@ export const applyJob = async (req, res) => {
       return res.status(400).json({ message: "Resume required" });
     }
 
-    // No req.file check, use resume from req.body
+    // Check for duplicate application
+    const existingApplication = await Application.findOne({
+      userId,
+      jobId,
+    });
+
+    if (existingApplication) {
+      return res.status(400).json({
+        message: "You have already applied for this job",
+      });
+    }
+
     const application = new Application({
       jobId,
       userId,
@@ -23,7 +33,7 @@ export const applyJob = async (req, res) => {
 
     await application.save();
 
-    // ✅ SAFE POPULATE
+    // Populate user and job data
     await application.populate({
       path: "userId",
       select: "name email",
@@ -42,16 +52,21 @@ export const applyJob = async (req, res) => {
       _id: application._id,
       user: application.userId,
       job: application.jobId,
-      resumeUrl: `/uploads/resumes/${resumeFileName}`,
+      resumeUrl: `${resumeFileName}`,
       createdAt: application.createdAt,
       status: application.status,
     };
 
+    // Send confirmation email to applicant
     try {
-      const io = getIO();
-      io.to("admins").emit("newApplication", payload);
-    } catch (err) {
-      console.warn("Socket emit skipped:", err.message);
+      await sendEmail(
+        application.userId.email,
+        "Application Submitted Successfully",
+        `Dear ${application.userId.name},\n\nYour application for the position "${application.jobId.title}" at ${application.jobId.company} has been submitted successfully.\n\nWe will review your application and get back to you soon.\n\nBest regards,\nRecruitFlow Team`,
+      );
+    } catch (emailError) {
+      console.warn("Confirmation email failed:", emailError.message);
+      // Don't fail the request if email fails
     }
 
     res.status(201).json({
@@ -60,14 +75,116 @@ export const applyJob = async (req, res) => {
     });
   } catch (error) {
     console.error("Apply Job Error:", error);
-    res.status(500).json({ message: "Application failed" });
+
+    // More specific error messages
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid job ID format",
+      });
+    }
+
+    res.status(500).json({
+      message: "Application failed. Please try again later.",
+    });
   }
 };
 
-// ================= GET ALL APPLICATIONS =================
+// ================= GET ALL APPLICATIONS (ADMIN) =================
 export const getAllApplications = async (req, res) => {
   try {
-    const applications = await Application.find()
+    // Optional query parameters for filtering
+    const { status, jobId, fromDate, toDate } = req.query;
+
+    let query = {};
+
+    // Status filter
+    if (status && status !== "all") {
+      query.status = status.toLowerCase();
+    }
+
+    // Job filter
+    if (jobId && mongoose.Types.ObjectId.isValid(jobId)) {
+      query.jobId = new mongoose.Types.ObjectId(jobId);
+    }
+
+    // Date range filter
+    if (fromDate || toDate) {
+      query.createdAt = {};
+      if (fromDate) {
+        query.createdAt.$gte = new Date(fromDate);
+      }
+      if (toDate) {
+        query.createdAt.$lte = new Date(toDate);
+      }
+    }
+
+    const applications = await Application.find(query)
+      .populate({
+        path: "userId",
+        select: "name email phone",
+        strictPopulate: false,
+      })
+      .populate({
+        path: "jobId",
+        select: "title company location",
+        strictPopulate: false,
+      })
+      .sort({ createdAt: -1 }); // Sort by newest first
+
+    const result = applications.map((a) => ({
+      _id: a._id,
+      user: a.userId,
+      job: a.jobId,
+      resumeUrl: a.resume ? `${a.resume}` : null,
+      createdAt: a.createdAt,
+      status: a.status || "pending",
+      updatedAt: a.updatedAt,
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error("Get All Applications Error:", error);
+    res.status(500).json({
+      message: "Error loading applications. Please try again.",
+    });
+  }
+};
+
+// ================= UPDATE STATUS (APPROVE / REJECT) =================
+export const updateApplicationStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { status, notes } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid application ID",
+      });
+    }
+
+    if (!status) {
+      return res.status(400).json({
+        message: "Status is required",
+      });
+    }
+
+    // Normalize status
+    status = status.toLowerCase();
+
+    if (!["approved", "rejected"].includes(status)) {
+      return res.status(400).json({
+        message: "Status must be 'approved' or 'rejected'",
+      });
+    }
+
+    const application = await Application.findById(id)
       .populate({
         path: "userId",
         select: "name email",
@@ -79,64 +196,118 @@ export const getAllApplications = async (req, res) => {
         strictPopulate: false,
       });
 
-    const result = applications.map((a) => ({
-      _id: a._id,
-      user: a.userId,
-      job: a.jobId,
-      resumeUrl: `/uploads/resumes/${a.resume}`,
-      createdAt: a.createdAt,
-      status: a.status,
-    }));
+    if (!application) {
+      return res.status(404).json({
+        message: "Application not found",
+      });
+    }
 
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ message: "Error loading applications" });
+    // Check if status is already the same
+    if (application.status === status) {
+      return res.status(400).json({
+        message: `Application is already ${status}`,
+      });
+    }
+
+    // Save old status for logging
+    const oldStatus = application.status || "pending";
+
+    // Update application
+    application.status = status;
+    if (notes) {
+      application.notes = notes;
+    }
+    await application.save();
+
+    // Send email notification
+    try {
+      if (status === "approved") {
+        await sendEmail(
+          application.userId.email,
+          "Congratulations! Your Application Has Been Approved",
+          `Dear ${application.userId.name},\n\nWe are pleased to inform you that your application for the position "${application.jobId.title}" at ${application.jobId.company} has been approved!\n\nCongratulations! You have been selected for the interview round.\n\nOur team will contact you shortly to schedule your interview.\n\nBest regards,\nRecruitFlow Team`,
+        );
+      } else if (status === "rejected") {
+        await sendEmail(
+          application.userId.email,
+          "Update Regarding Your Application",
+          `Dear ${application.userId.name},\n\nThank you for applying for the position "${application.jobId.title}" at ${application.jobId.company}.\n\nAfter careful consideration, we regret to inform you that we have decided not to move forward with your application at this time.\n\nWe appreciate your interest in our company and encourage you to apply for future openings that match your skills and experience.\n\nBest regards,\nRecruitFlow Team`,
+        );
+      }
+    } catch (emailError) {
+      console.warn("Status update email failed:", emailError.message);
+      // Continue even if email fails
+    }
+
+    res.json({
+      message: `Application ${status} successfully`,
+      application: {
+        _id: application._id,
+        status: application.status,
+        updatedAt: application.updatedAt,
+      },
+    });
+  } catch (err) {
+    console.error("Update Status Error:", err);
+
+    if (err.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid application ID",
+      });
+    }
+
+    res.status(500).json({
+      message: "Failed to update application status. Please try again.",
+    });
   }
 };
 
-// ================= UPDATE STATUS (APPROVE / REJECT) =================
-export const updateApplicationStatus = async (req, res) => {
+// ================= GET APPLICATION BY ID =================
+export const getApplicationById = async (req, res) => {
   try {
     const { id } = req.params;
-    let { status } = req.body;
 
-    // ✅ VERY IMPORTANT FIX
-    status = status.toLowerCase();
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid application ID",
+      });
+    }
 
-    const application = await Application.findById(id).populate({
-      path: "userId",
-      select: "name email",
-      strictPopulate: false,
-    });
+    const application = await Application.findById(id)
+      .populate({
+        path: "userId",
+        select: "name email phone",
+        strictPopulate: false,
+      })
+      .populate({
+        path: "jobId",
+        select: "title company location description",
+        strictPopulate: false,
+      });
 
     if (!application) {
-      return res.status(404).json({ message: "Application not found" });
+      return res.status(404).json({
+        message: "Application not found",
+      });
     }
 
-    application.status = status;
-    await application.save();
+    const result = {
+      _id: application._id,
+      user: application.userId,
+      job: application.jobId,
+      resumeUrl: application.resume ? `${application.resume}` : null,
+      createdAt: application.createdAt,
+      status: application.status || "pending",
+      updatedAt: application.updatedAt,
+      notes: application.notes || null,
+    };
 
-    // 📧 SEND EMAIL
-    if (status === "approved") {
-      await sendEmail(
-        application.userId.email,
-        "Interview Selection",
-        "Congratulations, you are selected for the interview round, and tomorrow your interview will be in online mode."
-      );
-    }
-
-    if (status === "rejected") {
-      await sendEmail(
-        application.userId.email,
-        "Application Update",
-        "Sorry, you are not selected for the next round."
-      );
-    }
-
-    res.json({ message: `Application ${status} successfully` });
-  } catch (err) {
-    console.error("Update Status Error:", err);
-    res.status(500).json({ message: "Action failed" });
+    res.json(result);
+  } catch (error) {
+    console.error("Get Application By ID Error:", error);
+    res.status(500).json({
+      message: "Error loading application details",
+    });
   }
 };
 
@@ -149,7 +320,7 @@ export const getMyApplications = async (req, res) => {
     const applications = await Application.find({ userId })
       .populate({
         path: "jobId",
-        select: "title company",
+        select: "title company location salary",
         strictPopulate: false,
       })
       .sort({ createdAt: -1 });
@@ -157,14 +328,46 @@ export const getMyApplications = async (req, res) => {
     const result = applications.map((a) => ({
       _id: a._id,
       job: a.jobId,
-      resumeUrl: `/uploads/resumes/${a.resume}`,
-      status: a.status,
+      resumeUrl: a.resume ? `${a.resume}` : null,
+      status: a.status || "pending",
       createdAt: a.createdAt,
+      updatedAt: a.updatedAt,
     }));
 
     res.json(result);
   } catch (error) {
     console.error("Get My Applications Error:", error);
-    res.status(500).json({ message: "Failed to load applications" });
+    res.status(500).json({
+      message: "Failed to load your applications. Please try again.",
+    });
+  }
+};
+
+// ================= GET APPLICATION STATISTICS =================
+export const getApplicationStats = async (req, res) => {
+  try {
+    const stats = await Application.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Convert to a more friendly format
+    const formattedStats = {
+      total: stats.reduce((sum, item) => sum + item.count, 0),
+      pending: stats.find((item) => item._id === "pending")?.count || 0,
+      approved: stats.find((item) => item._id === "approved")?.count || 0,
+      rejected: stats.find((item) => item._id === "rejected")?.count || 0,
+    };
+
+    res.json(formattedStats);
+  } catch (error) {
+    console.error("Get Application Stats Error:", error);
+    res.status(500).json({
+      message: "Failed to load application statistics",
+    });
   }
 };

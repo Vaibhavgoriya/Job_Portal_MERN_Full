@@ -1,7 +1,45 @@
 import Application from "../models/Application.js";
 import Job from "../models/Job.js";
-import { getIO } from "../utils/socket.js";
 import sendEmail from "../utils/sendEmail.js";
+
+/* ===============================
+   ADD JOB (ADMIN)
+================================ */
+export const addJobByAdmin = async (req, res) => {
+  try {
+    const {
+      title,
+      company,
+      location,
+      salary,
+      description,
+      technology,
+      experience,
+    } = req.body;
+
+    const job = new Job({
+      title,
+      company,
+      location,
+      salary,
+      description,
+      technology: Array.isArray(technology)
+        ? technology
+        : typeof technology === "string"
+          ? technology
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+      experience: experience ? String(experience) : "",
+    });
+
+    await job.save();
+    res.status(201).json(job);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 /* ===============================
    EDIT JOB (ADMIN)
@@ -9,7 +47,17 @@ import sendEmail from "../utils/sendEmail.js";
 export const editJobByAdmin = async (req, res) => {
   try {
     const jobId = req.params.id;
-    const { title, company, location, jobType, salary, description, technology, experience } = req.body;
+    const {
+      title,
+      company,
+      location,
+      jobType,
+      salary,
+      description,
+      technology,
+      experience,
+    } = req.body;
+
     const updates = {
       title,
       company,
@@ -20,28 +68,21 @@ export const editJobByAdmin = async (req, res) => {
       technology: Array.isArray(technology)
         ? technology
         : typeof technology === "string"
-        ? technology.split(",").map((t) => t.trim()).filter(Boolean)
-        : [],
-      experience: experience ? String(experience) : ""
+          ? technology
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+      experience: experience ? String(experience) : "",
     };
 
-    console.log("editJobByAdmin received payload:", req.body);
-    console.log("editJobByAdmin applying updates:", updates);
+    const job = await Job.findByIdAndUpdate(jobId, updates, {
+      new: true,
+      runValidators: true,
+      omitUndefined: true,
+    });
 
-    const job = await Job.findByIdAndUpdate(jobId, updates, { new: true, runValidators: true, omitUndefined: true });
     if (!job) return res.status(404).json({ message: "Job not found" });
-
-    console.log("editJobByAdmin updated job:", job);
-
-    // emit update to users
-    try {
-      const io = getIO();
-      console.log("Emitting updateJob (admin edited)", { jobId: job._id });
-      io.to("users").emit("updateJob", job);
-      console.log("updateJob emitted (admin edited)");
-    } catch (err) {
-      console.warn("Socket not available to emit updateJob (admin)", err.message);
-    }
 
     res.json(job);
   } catch (error) {
@@ -49,22 +90,17 @@ export const editJobByAdmin = async (req, res) => {
   }
 };
 
+/* ===============================
+   DELETE JOB (ADMIN)
+================================ */
 export const deleteJobByAdmin = async (req, res) => {
   try {
     const jobId = req.params.id;
     const job = await Job.findByIdAndDelete(jobId);
+
     if (!job) return res.status(404).json({ message: "Job not found" });
 
-    try {
-      const io = getIO();
-      console.log("Emitting deleteJob (admin deleted)", { jobId });
-      io.to("users").emit("deleteJob", { _id: jobId });
-      console.log("deleteJob emitted (admin deleted)");
-    } catch (err) {
-      console.warn("Socket not available to emit deleteJob (admin)", err.message);
-    }
-
-    res.json({ message: "Job deleted" });
+    res.json({ message: "Job deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -75,18 +111,17 @@ export const deleteJobByAdmin = async (req, res) => {
 ================================ */
 export const getAllApplications = async (req, res) => {
   try {
-    console.log("getAllApplications called", { authHeader: req.headers.authorization });
     const applications = await Application.find()
       .populate("userId", "name email")
       .populate("jobId", "title company");
 
-    const result = applications.map((a) => ({
-      _id: a._id,
-      user: a.userId,
-      job: a.jobId,
-      resumeUrl: `/uploads/resumes/${a.resume}`,
-      createdAt: a.createdAt,
-      status: a.status,
+    const result = applications.map((app) => ({
+      _id: app._id,
+      user: app.userId,
+      job: app.jobId,
+      resumeUrl: app.resume,
+      createdAt: app.createdAt,
+      status: app.status,
     }));
 
     res.json(result);
@@ -96,87 +131,51 @@ export const getAllApplications = async (req, res) => {
 };
 
 /* ===============================
-   ADD JOB (ADMIN)
+   APPROVE APPLICATION
 ================================ */
-export const addJobByAdmin = async (req, res) => {
-  try {
-
-    const { title, company, location, salary, description, technology, experience } = req.body;
-    const job = new Job({
-      title,
-      company,
-      location,
-      salary,
-      description,
-      technology: Array.isArray(technology)
-        ? technology
-        : typeof technology === "string"
-        ? technology.split(",").map((t) => t.trim()).filter(Boolean)
-        : [],
-      experience: experience ? String(experience) : ""
-    });
-
-    await job.save();
-
-    // emit new job to users so they see it in real-time
-    try {
-      const io = getIO();
-      console.log("Emitting newJob (admin added)", { jobId: job._id });
-      io.to("users").emit("newJob", job);
-      console.log("newJob emitted (admin added)");
-    } catch (err) {
-      console.warn("Socket not available to emit newJob (admin)", err.message);
-    }
-
-    res.status(201).json(job);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Approve application and send email
 export const approveApplication = async (req, res) => {
-        console.log("ApproveApplication req.body:", req.body);
-        if (!req.body.applicationId) {
-          console.error("ApproveApplication error: applicationId missing");
-          return res.status(400).json({ message: "applicationId missing" });
-        }
-    console.log("ApproveApplication req.body:", req.body);
   try {
     const { applicationId, userEmail } = req.body;
-    // Update application status in DB
-    await Application.findByIdAndUpdate(applicationId, { status: "approved" }, { new: true });
+
+    if (!applicationId) {
+      return res.status(400).json({ message: "applicationId missing" });
+    }
+
+    await Application.findByIdAndUpdate(applicationId, { status: "approved" });
+
     await sendEmail(
       userEmail,
       "Interview Selection - Job Portal",
-      "Congratulations, you are selected for the interview round, and tomorrow your interview will be in online mode."
+      "Congratulations! You are selected for the interview round. Your interview will be online.",
     );
-    res.json({ message: "Approval email sent." });
+
+    res.json({ message: "Approval email sent successfully." });
   } catch (error) {
-    console.error("ApproveApplication error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// Reject application and send email
+/* ===============================
+   REJECT APPLICATION
+================================ */
 export const rejectApplication = async (req, res) => {
-        if (!req.body.applicationId) {
-          console.error("RejectApplication error: applicationId missing");
-          return res.status(400).json({ message: "applicationId missing" });
-        }
-    console.log("RejectApplication req.body:", req.body);
   try {
     const { applicationId, userEmail } = req.body;
-    // Update application status in DB
-    await Application.findByIdAndUpdate(applicationId, { status: "rejected" }, { new: true });
+
+    if (!applicationId) {
+      return res.status(400).json({ message: "applicationId missing" });
+    }
+
+    await Application.findByIdAndUpdate(applicationId, { status: "rejected" });
+
     await sendEmail(
       userEmail,
       "Application Update - Job Portal",
-      "Sorry, you are not selected for the next round."
+      "Sorry, you were not selected for the next round.",
     );
-    res.json({ message: "Rejection email sent." });
+
+    res.json({ message: "Rejection email sent successfully." });
   } catch (error) {
-    console.error("RejectApplication error:", error);
     res.status(500).json({ message: error.message });
   }
 };

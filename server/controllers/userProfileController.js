@@ -29,7 +29,7 @@ export const updateUserProfile = async (req, res) => {
 export const uploadProfilePic = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    const url = `/uploads/profilePics/${req.file.filename}`;
+    const url = `${req.file.filename}`;
     await User.findByIdAndUpdate(req.user.id, { profilePic: url });
     res.json({ url });
   } catch (err) {
@@ -41,7 +41,7 @@ export const uploadProfilePic = async (req, res) => {
 export const uploadResume = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    const url = `/uploads/resumes/${req.file.filename}`;
+    const url = `${req.file.filename}`;
     await User.findByIdAndUpdate(req.user.id, { resume: url });
     res.json({ url });
   } catch (err) {
