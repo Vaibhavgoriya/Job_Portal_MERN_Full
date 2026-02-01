@@ -46,11 +46,9 @@ export const loginAdmin = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign(
-      { id: admin._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     res.json({
       message: "Admin login successful",
@@ -66,5 +64,3 @@ export const loginAdmin = async (req, res) => {
     res.status(500).json({ message: "Admin login failed" });
   }
 };
-
-
