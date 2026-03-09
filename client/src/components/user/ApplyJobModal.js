@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "../../api/axios";
 import { toast } from "react-toastify";
 
@@ -98,16 +98,7 @@ const modal = {
   flexDirection: "column",
   alignItems: "center",
 };
-const input = {
-  marginBottom: 18,
-  width: "100%",
-  padding: 12,
-  borderRadius: 7,
-  border: "1.5px solid #e0e0e0",
-  fontSize: 15,
-  background: "#f9fafb",
-  outline: "none",
-};
+// ...existing code...
 const button = {
   background: "linear-gradient(90deg, #1976d2 0%, #43a047 100%)",
   color: "#fff",

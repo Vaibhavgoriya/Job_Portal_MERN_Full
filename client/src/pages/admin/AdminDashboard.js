@@ -51,7 +51,7 @@ function AdminDashboard() {
 
     // Clean up interval on component unmount
     return () => clearInterval(pollInterval);
-  }, [navigate]);
+  }, [navigate, fetchApplications]);
 
   const logout = () => {
     localStorage.removeItem("token");
