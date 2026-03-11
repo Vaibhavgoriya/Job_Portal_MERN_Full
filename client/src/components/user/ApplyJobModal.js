@@ -98,6 +98,7 @@ const modal = {
   flexDirection: "column",
   alignItems: "center",
 };
+// Removed unused 'input' variable
 // ...existing code...
 const button = {
   background: "linear-gradient(90deg, #1976d2 0%, #43a047 100%)",
