@@ -3,20 +3,27 @@ import axios from "../../api/axios";
 import { toast } from "react-toastify";
 
 const ApplyJobModal = ({ job, open, onClose, onSuccess }) => {
-  // ...existing code...
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [profile, setProfile] = useState(null);
+
   useEffect(() => {
     // Fetch user profile to check completeness
-    const token = localStorage.getItem("token");
-    axios.get("/users/profile", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {}
-    }).then(res => {
-      setProfile(res.data);
-    }).catch(() => {
-      setProfile(null);
-    });
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("token");
+      try {
+        const res = await axios.get("/users/profile", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        setProfile(res.data);
+      } catch (err) {
+        setProfile(null);
+      }
+    };
+
+    if (open) {
+      fetchProfile();
+    }
   }, [open]);
 
   if (!open || !job) return null;
@@ -25,7 +32,6 @@ const ApplyJobModal = ({ job, open, onClose, onSuccess }) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
 
     // Check profile completeness
     if (!profile || !profile.name || !profile.email || !profile.phone || !profile.address || !profile.education || !profile.experience || !profile.skills || !profile.resume) {
@@ -71,7 +77,6 @@ const ApplyJobModal = ({ job, open, onClose, onSuccess }) => {
   );
 };
 
-
 const overlay = {
   position: "fixed",
   top: 0,
@@ -85,6 +90,7 @@ const overlay = {
   justifyContent: "center",
   zIndex: 1000,
 };
+
 const modal = {
   background: "rgba(255,255,255,0.95)",
   borderRadius: 18,
@@ -98,8 +104,7 @@ const modal = {
   flexDirection: "column",
   alignItems: "center",
 };
-// Removed unused 'input' variable
-// ...existing code...
+
 const button = {
   background: "linear-gradient(90deg, #1976d2 0%, #43a047 100%)",
   color: "#fff",
@@ -114,6 +119,7 @@ const button = {
   boxShadow: "0 2px 8px rgba(25, 118, 210, 0.10)",
   transition: "background 0.2s, box-shadow 0.2s",
 };
+
 const closeBtn = {
   background: "#f3f4f6",
   color: "#333",

@@ -1,5 +1,5 @@
 import axios from "../../api/axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AddJob from "./AddJob";
 import { toast } from "react-toastify";
@@ -13,8 +13,8 @@ function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Function to fetch applications
-  const fetchApplications = async () => {
+  // Function to fetch applications - wrapped in useCallback
+  const fetchApplications = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -35,7 +35,7 @@ function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]); // Added navigate as dependency
 
   // Fetch applications on component mount
   useEffect(() => {
@@ -51,7 +51,7 @@ function AdminDashboard() {
 
     // Clean up interval on component unmount
     return () => clearInterval(pollInterval);
-  }, [navigate, fetchApplications]);
+  }, [fetchApplications]); // Now fetchApplications is properly included
 
   const logout = () => {
     localStorage.removeItem("token");
