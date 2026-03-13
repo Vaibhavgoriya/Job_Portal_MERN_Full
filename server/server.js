@@ -25,19 +25,21 @@ const startServer = async () => {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
 
-    // CORS configuration
+    // ✅ CORS configuration - UPDATED with your new backend URL
     const allowedOrigins = [
       'http://localhost:3000',
-      'https://job-portal-mern-full.vercel.app',  // તમારું Vercel URL
-      'https://job-portal-mern-full-oj3d7gbnf-vaibhav-goriyas-projects.vercel.app'
+      'https://job-portal-mern-full.vercel.app',
+      'https://job-portal-mern-full-oj3d7gbnf-vaibhav-goriyas-projects.vercel.app',
+      'https://job-portal-backend-nfbt.onrender.com'  // ✅ Added your new backend URL
     ];
 
     app.use(cors({
       origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, postman)
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
           callback(null, true);
         } else {
-          console.log('Blocked origin:', origin);
+          console.log('❌ Blocked origin:', origin);
           callback(new Error('Not allowed by CORS'));
         }
       },
@@ -86,7 +88,7 @@ const startServer = async () => {
 
     // Error handling middleware
     app.use((err, req, res, next) => {
-      console.error('Server Error:', err);
+      console.error('❌ Server Error:', err);
       
       if (err.message === 'Not allowed by CORS') {
         return res.status(403).json({ 
@@ -110,13 +112,12 @@ const startServer = async () => {
     });
 
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };
 
 startServer();
-
 
 
 // import express from "express";
