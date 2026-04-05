@@ -881,7 +881,7 @@ export default function AddJob({ onAdded }) {
           color: var(--primary-color);
           font-weight: 500;
         }
-
+ 
         .editing-badge {
           padding: 0.375rem 0.75rem;
           background: linear-gradient(

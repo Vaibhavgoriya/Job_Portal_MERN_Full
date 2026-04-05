@@ -64,7 +64,7 @@ export default function Applications() {
             <b>Applied At:</b> {new Date(a.createdAt).toLocaleString()}
           </p>
           <a
-            href={`http://localhost:5000${a.resumeUrl}`}
+            href={`https://job-portal-backend-nfbt.onrender.com${a.resumeUrl}`}
             target="_blank"
             rel="noreferrer"
           >
