@@ -26,7 +26,6 @@ export const userSendOtp = async (req, res) => {
     console.log("📧 Calling sendEmail function...");
     await sendEmail(email, "Password Reset OTP", `Your OTP is ${otp}`);
     console.log("✅ Email sent successfully");
-    res.status(400).json({ message: "✅ Email sent successfully" });
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
