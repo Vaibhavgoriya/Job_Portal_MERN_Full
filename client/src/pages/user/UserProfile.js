@@ -676,7 +676,7 @@ const UserProfile = () => {
                     📄
                   </div>
                   <a
-                    href={`http://localhost:5000/uploads/resumes/${profile.resume}`}
+                    href={`http://localhost:5000${profile.resume && profile.resume.startsWith('/uploads/resumes/') ? profile.resume : '/uploads/resumes/' + profile.resume}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
