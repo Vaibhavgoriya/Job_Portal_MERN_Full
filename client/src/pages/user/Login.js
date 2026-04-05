@@ -13,8 +13,7 @@ function Login() {
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
-    }
-
+    } 
     setLoading(true);
     try {
       const res = await axios.post("/users/login", { email, password });
