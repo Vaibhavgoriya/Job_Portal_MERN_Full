@@ -24,12 +24,9 @@ export const userSendOtp = async (req, res) => {
     console.log("💾 OTP saved to database");
 
     console.log("📧 Calling sendEmail function...");
-    await sendEmail(
-      email,
-      "Password Reset OTP",
-      `Your OTP is ${otp}`
-    );
+    await sendEmail(email, "Password Reset OTP", `Your OTP is ${otp}`);
     console.log("✅ Email sent successfully");
+    res.status(400).json({ message: "✅ Email sent successfully" });
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
@@ -37,11 +34,11 @@ export const userSendOtp = async (req, res) => {
     console.error("Error details:", {
       message: err.message,
       stack: err.stack,
-      name: err.name
+      name: err.name,
     });
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Failed to send OTP. Please try again.",
-      error: err.message 
+      error: err.message,
     });
   }
 };
@@ -71,9 +68,9 @@ export const userVerifyOtp = async (req, res) => {
     res.json({ message: "OTP verified" });
   } catch (err) {
     console.error("❌ Error in userVerifyOtp:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "OTP verification failed",
-      error: err.message 
+      error: err.message,
     });
   }
 };
@@ -100,9 +97,9 @@ export const userResetPassword = async (req, res) => {
     res.json({ message: "Password reset successful" });
   } catch (err) {
     console.error("❌ Error in userResetPassword:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Password reset failed",
-      error: err.message 
+      error: err.message,
     });
   }
 };
