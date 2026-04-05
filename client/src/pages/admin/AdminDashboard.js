@@ -625,7 +625,7 @@ function AdminDashboard() {
                   <h3>Attachments</h3>
                   <div className="attachment-section">
                     <a
-                      href={`${process.env.REACT_APP_SERVER_URL || "http://localhost:5000"}${selectedApp.resumeUrl}`}
+                      href={`${process.env.REACT_APP_SERVER_URL || "https://job-portal-backend-nfbt.onrender.com"}${selectedApp.resumeUrl}`}
                       target="_blank"
                       rel="noreferrer"
                       className="attachment-link"

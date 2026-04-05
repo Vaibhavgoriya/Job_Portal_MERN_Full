@@ -13,7 +13,7 @@ const UserProfile = () => {
     experience: "",
     skills: "",
     profilePic: "",
-    resume: ""
+    resume: "",
   });
   const [edit, setEdit] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,19 +21,24 @@ const UserProfile = () => {
   const [resumeFile, setResumeFile] = useState(null);
 
   const navigate = useNavigate();
-  
+
   useEffect(() => {
-    const token = localStorage.getItem("userToken") || localStorage.getItem("token");
+    const token =
+      localStorage.getItem("userToken") || localStorage.getItem("token");
     if (!token) {
       navigate("/login");
       return;
     }
-    axios.get("/users/profile")
-      .then(res => {
+    axios
+      .get("/users/profile")
+      .then((res) => {
         setProfile(res.data);
       })
-      .catch(err => {
-        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+      .catch((err) => {
+        if (
+          err.response &&
+          (err.response.status === 401 || err.response.status === 403)
+        ) {
           localStorage.removeItem("userToken");
           localStorage.removeItem("token");
           navigate("/login");
@@ -41,15 +46,15 @@ const UserProfile = () => {
       });
   }, [navigate]);
 
-  const handleChange = e => {
+  const handleChange = (e) => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
 
-  const handlePicChange = e => {
+  const handlePicChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  const handleResumeChange = e => {
+  const handleResumeChange = (e) => {
     setResumeFile(e.target.files[0]);
   };
 
@@ -61,16 +66,24 @@ const UserProfile = () => {
       if (file) {
         const formData = new FormData();
         formData.append("profilePic", file);
-        const res = await axios.post("/users/upload-profile-pic", formData, { headers: { "Content-Type": "multipart/form-data" } });
+        const res = await axios.post("/users/upload-profile-pic", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
         profilePicUrl = res.data.url;
       }
       if (resumeFile) {
         const formData = new FormData();
         formData.append("resume", resumeFile);
-        const res = await axios.post("/users/upload-resume", formData, { headers: { "Content-Type": "multipart/form-data" } });
+        const res = await axios.post("/users/upload-resume", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
         resumeUrl = res.data.url;
       }
-      await axios.put("/users/profile", { ...profile, profilePic: profilePicUrl, resume: resumeUrl });
+      await axios.put("/users/profile", {
+        ...profile,
+        profilePic: profilePicUrl,
+        resume: resumeUrl,
+      });
       // Fetch updated profile after save
       const updated = await axios.get("/users/profile");
       setProfile(updated.data);
@@ -296,7 +309,7 @@ const UserProfile = () => {
               <img
                 src={
                   profile.profilePic && profile.profilePic !== ""
-                    ? `http://localhost:5000${profile.profilePic}`
+                    ? `https://job-portal-backend-nfbt.onrender.com/uploads/profilePics/${profile.profilePic}`
                     : "https://ui-avatars.com/api/?background=6366f1&color=ffffff&bold=true&name=" +
                       encodeURIComponent(profile.name || "User")
                 }
@@ -676,8 +689,7 @@ const UserProfile = () => {
                     📄
                   </div>
                   <a
-                    
-                    href={`http://localhost:5000${profile.resume.startsWith('/uploads/resumes/') ? profile.resume : '/uploads/resumes/' + profile.resume}`}
+                    href={`https://job-portal-backend-nfbt.onrender.com${profile.resume.startsWith("/uploads/resumes/") ? profile.resume : "/uploads/resumes/" + profile.resume}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

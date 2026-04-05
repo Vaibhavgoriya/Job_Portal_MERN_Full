@@ -47,7 +47,7 @@ function Login() {
               <path d="M20 12L28 20L20 28L12 20L20 12Z" fill="white" />
               <circle cx="20" cy="20" r="4" fill="#764ba2" />
             </svg>
-            <h1>Company<span>Name</span></h1>
+            <h1><span>VG</span>Tech</h1>
           </div>
           <h2>Welcome Back</h2>
           <p className="login-subtitle">Sign in to continue to your account</p>
