@@ -1,11 +1,13 @@
 import axios from "axios";
 
 const instance = axios.create({
-  baseURL: "https://job-portal-backend-nfbt.onrender.com/api",
+  baseURL: "https://job-portal-backend-nfbt.onrender.com/api" // Livetestimg,
+  // baseURL: "http://localhost:5000/api", // Loacl testing
 });
 
 instance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("userToken") || localStorage.getItem("token");
+  const token =
+    localStorage.getItem("userToken") || localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
